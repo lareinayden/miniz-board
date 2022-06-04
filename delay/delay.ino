@@ -5,9 +5,9 @@
 
 unsigned int localPort = 2390;
 char packetBuffer[255];
-char ReplyBuffer[] = "acknowledged";
+char ReplyBuffer[32] = "acknowledged";
 
-char ssid[] = "TP-LINK_F3D4";
+char ssid[] = "TP-LINK_F4D4";
 char pass[] = "15291356";
 int status = WL_IDLE_STATUS;
 
@@ -48,6 +48,9 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   delay(300);
   digitalWrite(LED_BUILTIN, LOW);
+  packetBuffer[0] = 'a';
+  packetBuffer[1] = 'b';
+  packetBuffer[2] = 'c';
 }
 
 void loop() {
@@ -69,9 +72,9 @@ void loop() {
       packetBuffer[len] = 0;
     }
 
-    //Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    //Udp.write(ReplyBuffer);
-    //Udp.endPacket();
+    Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+    Udp.write(ReplyBuffer);
+    Udp.endPacket();
   }
 }
 
