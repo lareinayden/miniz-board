@@ -3,15 +3,20 @@
 #include <WiFiUdp.h>
 
 
+#define PACKET_SIZE 64
 unsigned int localPort = 2390;
-char packetBuffer[255];
-char ReplyBuffer[32] = "acknowledged";
+char packetBuffer[PACKET_SIZE];
+char ReplyBuffer[PACKET_SIZE];
 
 char ssid[] = "TP-LINK_F4D4";
 char pass[] = "15291356";
 int status = WL_IDLE_STATUS;
 
 WiFiUDP Udp;
+
+
+
+
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -59,22 +64,28 @@ void loop() {
   int packetSize = Udp.parsePacket();
   
   if (packetSize) {
-    Serial.print("Received packet of size ");
-    Serial.println(packetSize);
-    Serial.print("From ");
+    //Serial.print("Received packet of size ");
+    //Serial.println(packetSize);
+    //Serial.print("From ");
     IPAddress remoteIp = Udp.remoteIP();
-    Serial.print(remoteIp);
-    Serial.print(", port ");
-    Serial.println(Udp.remotePort());
+    //Serial.print(remoteIp);
+    //Serial.print(", port ");
+    //Serial.println(Udp.remotePort());
     // read the packet into packetBufffer
-    int len = Udp.read(packetBuffer, 255);
-    if (len > 0) {
-      packetBuffer[len] = 0;
-    }
+    // TODO figure out timeout
+    int len = Udp.read(packetBuffer, PACKET_SIZE);
 
     Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    Udp.write(ReplyBuffer);
-    Udp.endPacket();
+    Udp.write(packetBuffer,PACKET_SIZE);
+    int retval = Udp.endPacket();
+    /*
+    if (retval){
+      Serial.println("sent success");
+    } else {
+      Serial.println("sent FAIL");
+    }
+    */
+
   }
 }
 
