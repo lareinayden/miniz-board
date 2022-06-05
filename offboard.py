@@ -74,7 +74,8 @@ class Offboard(PrintObject):
         count = 0
         while count < 100:
             # prepare packet
-            packet = self.preparePingPacket()
+            #packet = self.preparePingPacket()
+            packet = self.prepareCommandPacket()
             # send
             self.sendPacket(packet)
             #self.print_ok("sent packet no.%d"%count)
@@ -110,6 +111,14 @@ class Offboard(PrintObject):
         packet.type = 0
         packet.subtype = 0
         packet.emptyPayload()
+        packet.makePacket()
+        return packet
+
+    def prepareCommandPacket(self,throttle=0.345,steering=-3.888):
+        packet = OffboardPacket()
+        packet.type = 1
+        packet.subtype = 1886
+        packet.payload = pack('ff',throttle,steering)
         packet.makePacket()
         return packet
         

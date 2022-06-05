@@ -2,7 +2,30 @@
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
 
-//#include "arduino_secrets.h" 
+#define PACKET_SIZE 64
+unsigned int localPort = 2390;
+char in_buffer[PACKET_SIZE];
+char out_buffer[PACKET_SIZE];
+
+typedef struct {
+  uint32_t seq_no;
+  uint32_t ts;
+  uint16_t type;
+  uint16_t sub_type;
+  union {
+    // general
+    char payload[52];
+    // type 1.x
+    struct {
+      float throttle;
+      float steering;
+    };
+  };
+} Packet;
+
+char ssid[] = "TP-LINK_F4D4";
+char pass[] = "15291356";
+int status = WL_IDLE_STATUS;
 
 int encoder_s_pin = 14;
 int steer_rev_pin = 3;
@@ -11,27 +34,24 @@ int steer_fwd_pin = 2;
 int drive_rev_pin = 5;
 int drive_fwd_pin = 6;
 
-unsigned int localPort = 2390;
-char packetBuffer[255];
-char ReplyBuffer[] = "acknowledged";
-
-char driveBuffer[10];
-char steerBuffer[10];
-
-
-//long loop_time = millis();
-
-char ssid[] = "mkel";
-char pass[] = "matthewk";
-int status = WL_IDLE_STATUS;
+float steering_kp = 106.0;
+// [-1,1]
+float throttle = 0.0;
+float full_left_angle_rad = 27.0/180.0*3.141593;
+float full_right_angle_rad = -27.0/180.0*3.141593;
+float steering = 0.0;
 
 WiFiUDP Udp;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
-  Serial.begin(9600);
-  // initialize digital pin LED_BUILTIN as an output.
+  Serial.begin(115200);
+  setupWifi();
+  blinkTwice();
+  Udp.begin(localPort);
+}
 
+void blinkTwice(){
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(encoder_s_pin, INPUT);
   pinMode(steer_rev_pin, OUTPUT);
@@ -39,10 +59,18 @@ void setup() {
 
   pinMode(drive_rev_pin, OUTPUT);
   pinMode(drive_fwd_pin, OUTPUT);
-
-  // LED on indicates we are connecting to wifi
+  // LED blink to indicate we are ready for commands
   digitalWrite(LED_BUILTIN, HIGH);
+  delay(300);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(300);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(300);
+  digitalWrite(LED_BUILTIN, LOW);
 
+}
+
+void setupWifi(){
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
     while (true);
@@ -58,21 +86,68 @@ void setup() {
     delay(10000);
   }
   
-  // you're connected now, so print out the data:
-  Serial.print("You're connected to the network");
   printCurrentNet();
   printWifiData();
+}
 
-  Udp.begin(localPort);
+void loop() {
+//  Serial.println(millis() - loop_time);
+//  loop_time = millis();
+  int packet_size = Udp.parsePacket();
+  
+  if (packet_size) {
+    if (packet_size != PACKET_SIZE){ Serial.println("err packet size"); }
 
-  // LED blink to indicate we are ready for commands
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(300);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(300);
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(300);
-  digitalWrite(LED_BUILTIN, LOW);
+    //Serial.print("Received packet of size ");
+    //Serial.println(packetSize);
+    //Serial.print("From ");
+    IPAddress remoteIp = Udp.remoteIP();
+    int len = Udp.read(in_buffer, PACKET_SIZE);
+    if (len != PACKET_SIZE){ Serial.println("err reading packet size"); }
+    Serial.println("parsing packet");
+    parsePacket();
+    buildResponsePacket();
+    int retval = sendResponsePacket();
+    if (retval){
+      Serial.println("sent success");
+    } else {
+      Serial.println("sent FAIL");
+    }
+
+  }
+}
+
+// parse packet in in_buffer
+// set appropriate global variables
+void parsePacket(){
+  Packet *p = (Packet *) in_buffer;
+
+  Serial.print("seq_no: ");
+  Serial.println(p->seq_no);
+  Serial.print("ts: ");
+  Serial.println(p->ts);
+  Serial.print("type: ");
+  Serial.println(p->type);
+  Serial.print("subtype: ");
+  Serial.println(p->sub_type);
+  if (p->type == 1){
+    Serial.print("throttle: ");
+    Serial.println(p->throttle,5);
+    Serial.print("steering: ");
+    Serial.println(p->steering,5);
+  }
+}
+
+// build response packet, save in out_buffer
+// here we just echo the packet
+void buildResponsePacket(){
+  memcpy(out_buffer, in_buffer, PACKET_SIZE);
+}
+
+int sendResponsePacket(){
+  Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+  Udp.write(in_buffer,PACKET_SIZE);
+  return Udp.endPacket();
 }
 
 void printWifiData() {
@@ -90,6 +165,8 @@ void printWifiData() {
 }
 
 void printCurrentNet() {
+  // you're connected now, so print out the data:
+  Serial.println("Module connected to the network:");
   // print the SSID of the network you're attached to:
   Serial.print("SSID: ");
   Serial.println(WiFi.SSID());
@@ -109,7 +186,7 @@ void printCurrentNet() {
   byte encryption = WiFi.encryptionType();
   Serial.print("Encryption Type:");
   Serial.println(encryption, HEX);
-  Serial.println();
+  Serial.println("----- entering loop -----");
 }
 
 void printMacAddress(byte mac[]) {
@@ -125,105 +202,41 @@ void printMacAddress(byte mac[]) {
   Serial.println();
 }
 
-
 // The encoder returns values from ~400-650... We wan't to scale this to 0-255.
 // This barely changes the values for most encoders, but is here in case some encoders have a wider or narrower range.
-float full_left_calibration_value = 400.0;
-float full_right_calibration_value = 650.0;
+float full_left_encoder_value = 400.0;
+float full_right_encoder_value = 650.0;
+float steering_deadzone_rad = 10.0/180.0*3.141593;
 
-float scalar_multiplier = 255.0 / (full_right_calibration_value - full_left_calibration_value);
+// using global variable throttle and steering
+// set pwm for servo and throttle
+void actuateControls(){
+  int throttle_value = map(throttle, -1.0, 1.0, 0, 510);
+  if (throttle_value > 255) {
+    analogWrite(drive_fwd_pin, throttle_value - 255);
+    analogWrite(drive_rev_pin, 0);
+  } else if (throttle_value <= 255) {
+    analogWrite(drive_rev_pin, throttle_value);
+    analogWrite(drive_fwd_pin, 0);
+  }
 
-float kP = 0.4;
-float steer_tolerance = 10.0;
-
-// default to straight
-float steering_target = 127.5;
-float P = 0.0;
-
-void loop() {
-//  Serial.println(millis() - loop_time);
-//  loop_time = millis();
-  int packetSize = Udp.parsePacket();
-
-  // Uncomment this line to print encoder values to serial
-  // This is useful if you want to recalibrate the steering encoder range
-  // Serial.println(analogRead(encoder_s_pin));
 
   float raw_encoder = analogRead(encoder_s_pin);
-  
-  float scaled_encoder = (raw_encoder - full_left_calibration_value) * scalar_multiplier;
-  scaled_encoder = max(scaled_encoder, 0);
-  scaled_encoder = min(scaled_encoder, 255);
+  float actual_steering_angle_rad = map(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
+  actual_steering_angle_rad = constrain(actual_steering_angle_rad, full_left_angle_rad, full_right_angle_rad);
 
- 
-  
-  // update steering P controller
-  P = (int) (steering_target - scaled_encoder) * kP;
-  if (P < -(steer_tolerance/2.0)) {
-    analogWrite(steer_fwd_pin, max(min(P*-1, 255), 0));
+  int err = steering - actual_steering_angle_rad;
+
+  if (err < -(steering_deadzone_rad/2.0)) {
+    analogWrite(steer_fwd_pin, constrain(-err*steering_kp, 0,255));
     analogWrite(steer_rev_pin, 0);
-  } else if (P > (steer_tolerance/2.0)) {
-    analogWrite(steer_rev_pin, max(min(P, 255), 0));
+  } else if (err > (steering_deadzone_rad/2.0)) {
+    analogWrite(steer_fwd_pin, constrain(err*steering_kp, 0,255));
     analogWrite(steer_fwd_pin, 0);
   } else {
     analogWrite(steer_fwd_pin, 0);
     analogWrite(steer_rev_pin, 0);
   }
-  
-  
-  if (packetSize) {
-//    Serial.print("Received packet of size ");
-//    Serial.println(packetSize);
-//    Serial.print("From ");
-    IPAddress remoteIp = Udp.remoteIP();
-//    Serial.print(remoteIp);
-//    Serial.print(", port ");
-//    Serial.println(Udp.remotePort());
-    // read the packet into packetBufffer
-    int len = Udp.read(packetBuffer, 255);
-    if (len > 0) {
-      packetBuffer[len] = 0;
-    }
-//    Serial.println("Contents:");
-//    Serial.println(packetBuffer);
 
-    
-
-
-    strncpy(driveBuffer, packetBuffer, 3);
-    strncpy(steerBuffer, packetBuffer + 3, 3);
-    int raw_speed = atoi(driveBuffer);
-    int raw_steer = atoi(steerBuffer);
-
-    // Raw speed values range from 0 to 510.
-    // 0 is full stop
-    // 1-255 is forward motion, 256-510 is reverse motion
-    if (raw_speed > 255) {
-      analogWrite(drive_fwd_pin, raw_speed - 255);
-      analogWrite(drive_rev_pin, 0);
-    } else if (raw_speed <= 255) {
-      analogWrite(drive_rev_pin, raw_speed);
-      analogWrite(drive_fwd_pin, 0);
-    }
-
-    steering_target = raw_steer;
-//    Serial.println(steering_target);
-
-    
-//    
-//    analogWrite(drive_fwd_pin, );
-//    analogWrite(drive_fwd_pin, atoi(speedBuffer));
-
-    
-//    if (value < 600 && value > 450) {
-//       analogWrite(drive_fwd_pin, 100);
-//    } else {
-//      analogWrite(drive_fwd_pin, 0);
-//    }
-    
-    // send a reply, to the IP address and port that sent us the packet we received
-    Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    Udp.write(ReplyBuffer);
-    Udp.endPacket();
-  }
 }
+
