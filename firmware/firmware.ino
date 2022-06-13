@@ -8,6 +8,7 @@
 // TODO report mode change and status
 // TODO more intuitive indicator light
 // TODO add filter to encoder reading
+// TODO put PWM frequency outside audible range
 
 // network setting
 char ssid[] = "TP-LINK_F4D4";
@@ -51,7 +52,7 @@ float steering_kp = 100;
 float throttle = 0.0;
 // left positive, radians
 float steering = 0.0;
-float throttle_deadzone = 0.01;
+float throttle_deadzone = 0.05;
 
 float full_left_angle_rad = 26.1/180.0*PI;
 float full_right_angle_rad = -26.1/180.0*PI;
@@ -75,6 +76,8 @@ void blinkTwice(){
   pinMode(encoder_s_pin, INPUT);
   pinMode(steer_rev_pin, OUTPUT);
   pinMode(steer_fwd_pin, OUTPUT);
+  digitalWrite(steer_rev_pin,LOW);
+  digitalWrite(steer_fwd_pin,LOW);
 
   pinMode(drive_rev_pin, OUTPUT);
   pinMode(drive_fwd_pin, OUTPUT);
@@ -145,6 +148,8 @@ void loop() {
     throttle = 0;
     steering = 0;
     flag_failsafe = true;
+    Serial.print(millis());
+    Serial.println(" failsafe");
   }
 
   actuateControls();
@@ -250,19 +255,27 @@ float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
 // set pwm for servo and throttle
 void actuateControls(){
   if (flag_failsafe){
-    digitalWrite(drive_fwd_pin, LOW);
-    digitalWrite(drive_rev_pin, LOW);
-    analogWrite(steer_fwd_pin, 0);
-    analogWrite(steer_rev_pin, 0);
+    // brake mode for all
+    // NOTE digitalWrite no longer works
+    analogWrite(drive_fwd_pin, 0);
+    analogWrite(drive_rev_pin, 0);
+    analogWrite(steer_fwd_pin, 255);
+    analogWrite(steer_rev_pin, 255);
     return;
   }
-  //TODO: use switch
+  Serial.print(millis());
+  Serial.print("  ");
+
   if (abs(throttle) < throttle_deadzone){
-    digitalWrite(drive_fwd_pin, LOW);
-    digitalWrite(drive_rev_pin, LOW);
+    analogWrite(drive_fwd_pin, 0);
+    analogWrite(drive_rev_pin, 0);
+    digitalWrite(LED_BUILTIN,1);
+    Serial.print("brake ");
   } else {
+    digitalWrite(LED_BUILTIN,0);
     int throttle_value = (int)fmap(throttle, -1.0, 1.0, -255.0, 255.0);
     throttle_value = constrain(throttle_value, -255, 255);
+    Serial.print(throttle_value);
     if (throttle_value > 0) {
       analogWrite(drive_fwd_pin, throttle_value);
       analogWrite(drive_rev_pin, 0);
@@ -271,6 +284,9 @@ void actuateControls(){
       analogWrite(drive_fwd_pin, 0);
     }
   }
+  Serial.println();
+  //FIXME XXX
+  return;
 
 
   float raw_encoder = analogRead(encoder_s_pin);
@@ -278,6 +294,7 @@ void actuateControls(){
   measured_steering_rad = constrain(measured_steering_rad, full_right_angle_rad, full_left_angle_rad);
 
   float err = steering - measured_steering_rad;
+  /*
   Serial.print("raw: ");
   Serial.print(raw_encoder);
   Serial.print(" goal: ");
@@ -285,6 +302,7 @@ void actuateControls(){
   Serial.print(" actual: ");
   Serial.print(measured_steering_rad/PI*180.0,5);
   Serial.println();
+  */
 
   if (abs(err) < steering_deadzone_rad){
     analogWrite(steer_fwd_pin, 0);

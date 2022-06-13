@@ -5,6 +5,7 @@ from struct import pack, unpack
 import numpy as np
 from time import clock_gettime_ns, CLOCK_REALTIME
 from math import degrees,radians
+from joystick import Joystick
 
 class OffboardPacket:
     seq_no = 0
@@ -57,6 +58,7 @@ class Offboard(PrintObject):
         self.initSocket()
         #self.initSerial()
         self.printStatus()
+        self.joystick = Joystick()
 
     def initSocket(self):
         self.local_ip = "192.168.0.101"
@@ -70,27 +72,36 @@ class Offboard(PrintObject):
     def printStatus(self):
         return
 
-    def loop(self):
+    def main(self):
         self.delay_vec = []
-        count = 0
-        while count < 1000:
-            # prepare packet
-            #packet = self.preparePingPacket()
-            packet = self.prepareCommandPacket()
-            # send
-            self.sendPacket(packet)
-            #self.print_ok("sent packet no.%d"%count)
-            # wait for response
-            response = self.getResponse()
-            #self.print_ok("got response", response)
-            # parse packet
-            response_packet = self.parseResponse(response)
-            # log delay
-            delay = self.last_response_ts - self.last_sent_ts 
-            self.print_ok("delay (us) %d"%(delay))
-            self.delay_vec.append(delay)
-            count += 1
+        try:
+            while True:
+                self.loop()
+        except KeyboardInterrupt:
+            self.joystick.quit()
         print_ok("average delay (us) = ", np.mean(self.delay_vec))
+
+    def loop(self):
+        # read joystick
+        throttle = self.joystick.throttle
+        steering = self.joystick.steering * radians(26.1)
+        print(throttle,steering)
+        # prepare packet
+        #packet = self.preparePingPacket()
+        #packet = self.prepareCommandPacket(throttle,steering)
+        packet = self.prepareCommandPacket(0.2,steering)
+        # send
+        self.sendPacket(packet)
+        #self.print_ok("sent packet no.%d"%count)
+        # wait for response
+        response = self.getResponse()
+        #self.print_ok("got response", response)
+        # parse packet
+        response_packet = self.parseResponse(response)
+        # log delay
+        delay = self.last_response_ts - self.last_sent_ts 
+        self.print_ok("delay (us) %d"%(delay))
+        self.delay_vec.append(delay)
 
     def sendPacket(self,packet):
         sent_size = self.sock.sendto(packet.packet, (self.car_ip, self.car_port))
@@ -125,7 +136,7 @@ class Offboard(PrintObject):
         
 if __name__ == '__main__':
     main = Offboard()
-    main.loop()
+    main.main()
 
 
 
