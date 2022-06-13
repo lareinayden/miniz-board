@@ -1,12 +1,24 @@
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
+#define PI 3.14159265
 
+//TODO add parameter server, enable remote setting
+// TODO complete protocol
+// TODO report mode change and status
+// TODO more intuitive indicator light
+// TODO add filter to encoder reading
+
+// network setting
+char ssid[] = "TP-LINK_F4D4";
+char pass[] = "15291356";
+int status = WL_IDLE_STATUS;
+WiFiUDP Udp;
 #define PACKET_SIZE 64
 unsigned int localPort = 2390;
 char in_buffer[PACKET_SIZE];
 char out_buffer[PACKET_SIZE];
-
+unsigned long last_packet_ts = 0;
 typedef struct {
   uint32_t seq_no;
   uint32_t ts;
@@ -23,25 +35,32 @@ typedef struct {
   };
 } Packet;
 
-char ssid[] = "TP-LINK_F4D4";
-char pass[] = "15291356";
-int status = WL_IDLE_STATUS;
-
+// board pin layout
 int encoder_s_pin = 14;
+// left
 int steer_rev_pin = 3;
+// right
 int steer_fwd_pin = 2;
 
 int drive_rev_pin = 5;
 int drive_fwd_pin = 6;
 
-float steering_kp = 106.0;
+// electronics calibration
+float steering_kp = 100;
 // [-1,1]
 float throttle = 0.0;
-float full_left_angle_rad = 27.0/180.0*3.141593;
-float full_right_angle_rad = -27.0/180.0*3.141593;
+// left positive, radians
 float steering = 0.0;
+float throttle_deadzone = 0.01;
 
-WiFiUDP Udp;
+float full_left_angle_rad = 26.1/180.0*PI;
+float full_right_angle_rad = -26.1/180.0*PI;
+float full_left_encoder_value = 630.0;
+float full_right_encoder_value = 410.0;
+float steering_deadzone_rad = 2.5/180.0*PI;
+
+bool flag_failsafe = false;
+
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -95,6 +114,7 @@ void loop() {
 //  loop_time = millis();
   int packet_size = Udp.parsePacket();
   
+  // process incoming packet
   if (packet_size) {
     if (packet_size != PACKET_SIZE){ Serial.println("err packet size"); }
 
@@ -104,17 +124,30 @@ void loop() {
     IPAddress remoteIp = Udp.remoteIP();
     int len = Udp.read(in_buffer, PACKET_SIZE);
     if (len != PACKET_SIZE){ Serial.println("err reading packet size"); }
-    Serial.println("parsing packet");
+    //Serial.println("parsing packet");
     parsePacket();
+    last_packet_ts = millis();
+    flag_failsafe = false;
+
+    // response
     buildResponsePacket();
     int retval = sendResponsePacket();
+    /*
     if (retval){
       Serial.println("sent success");
     } else {
       Serial.println("sent FAIL");
     }
-
+    */
   }
+
+  if (millis() - last_packet_ts > 100){
+    throttle = 0;
+    steering = 0;
+    flag_failsafe = true;
+  }
+
+  actuateControls();
 }
 
 // parse packet in in_buffer
@@ -122,6 +155,7 @@ void loop() {
 void parsePacket(){
   Packet *p = (Packet *) in_buffer;
 
+  /*
   Serial.print("seq_no: ");
   Serial.println(p->seq_no);
   Serial.print("ts: ");
@@ -130,11 +164,16 @@ void parsePacket(){
   Serial.println(p->type);
   Serial.print("subtype: ");
   Serial.println(p->sub_type);
+  */
   if (p->type == 1){
+    /*
     Serial.print("throttle: ");
     Serial.println(p->throttle,5);
     Serial.print("steering: ");
     Serial.println(p->steering,5);
+    */
+    steering = p->steering;
+    throttle = p->throttle;
   }
 }
 
@@ -202,39 +241,59 @@ void printMacAddress(byte mac[]) {
   Serial.println();
 }
 
-// The encoder returns values from ~400-650... We wan't to scale this to 0-255.
-// This barely changes the values for most encoders, but is here in case some encoders have a wider or narrower range.
-float full_left_encoder_value = 400.0;
-float full_right_encoder_value = 650.0;
-float steering_deadzone_rad = 10.0/180.0*3.141593;
+
+float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 // using global variable throttle and steering
 // set pwm for servo and throttle
 void actuateControls(){
-  int throttle_value = map(throttle, -1.0, 1.0, 0, 510);
-  if (throttle_value > 255) {
-    analogWrite(drive_fwd_pin, throttle_value - 255);
-    analogWrite(drive_rev_pin, 0);
-  } else if (throttle_value <= 255) {
-    analogWrite(drive_rev_pin, throttle_value);
-    analogWrite(drive_fwd_pin, 0);
+  if (flag_failsafe){
+    digitalWrite(drive_fwd_pin, LOW);
+    digitalWrite(drive_rev_pin, LOW);
+    analogWrite(steer_fwd_pin, 0);
+    analogWrite(steer_rev_pin, 0);
+    return;
+  }
+  //TODO: use switch
+  if (abs(throttle) < throttle_deadzone){
+    digitalWrite(drive_fwd_pin, LOW);
+    digitalWrite(drive_rev_pin, LOW);
+  } else {
+    int throttle_value = (int)fmap(throttle, -1.0, 1.0, -255.0, 255.0);
+    throttle_value = constrain(throttle_value, -255, 255);
+    if (throttle_value > 0) {
+      analogWrite(drive_fwd_pin, throttle_value);
+      analogWrite(drive_rev_pin, 0);
+    } else {
+      analogWrite(drive_rev_pin, -throttle_value);
+      analogWrite(drive_fwd_pin, 0);
+    }
   }
 
 
   float raw_encoder = analogRead(encoder_s_pin);
-  float actual_steering_angle_rad = map(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
-  actual_steering_angle_rad = constrain(actual_steering_angle_rad, full_left_angle_rad, full_right_angle_rad);
+  float measured_steering_rad = fmap(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
+  measured_steering_rad = constrain(measured_steering_rad, full_right_angle_rad, full_left_angle_rad);
 
-  int err = steering - actual_steering_angle_rad;
+  float err = steering - measured_steering_rad;
+  Serial.print("raw: ");
+  Serial.print(raw_encoder);
+  Serial.print(" goal: ");
+  Serial.print(steering/PI*180.0,5);
+  Serial.print(" actual: ");
+  Serial.print(measured_steering_rad/PI*180.0,5);
+  Serial.println();
 
-  if (err < -(steering_deadzone_rad/2.0)) {
-    analogWrite(steer_fwd_pin, constrain(-err*steering_kp, 0,255));
+  if (abs(err) < steering_deadzone_rad){
+    analogWrite(steer_fwd_pin, 0);
     analogWrite(steer_rev_pin, 0);
-  } else if (err > (steering_deadzone_rad/2.0)) {
-    analogWrite(steer_fwd_pin, constrain(err*steering_kp, 0,255));
+  } else if (err > 0){
+    analogWrite(steer_rev_pin, constrain(err*steering_kp, 0,255));
     analogWrite(steer_fwd_pin, 0);
-  } else {
-    analogWrite(steer_fwd_pin, 0);
+  } else if (err < 0){
+    analogWrite(steer_fwd_pin, constrain(-err*steering_kp, 0,255));
     analogWrite(steer_rev_pin, 0);
   }
 

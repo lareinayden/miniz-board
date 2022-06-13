@@ -4,6 +4,7 @@ import socket
 from struct import pack, unpack
 import numpy as np
 from time import clock_gettime_ns, CLOCK_REALTIME
+from math import degrees,radians
 
 class OffboardPacket:
     seq_no = 0
@@ -72,7 +73,7 @@ class Offboard(PrintObject):
     def loop(self):
         self.delay_vec = []
         count = 0
-        while count < 100:
+        while count < 1000:
             # prepare packet
             #packet = self.preparePingPacket()
             packet = self.prepareCommandPacket()
@@ -114,7 +115,7 @@ class Offboard(PrintObject):
         packet.makePacket()
         return packet
 
-    def prepareCommandPacket(self,throttle=0.345,steering=-3.888):
+    def prepareCommandPacket(self,throttle=0.0,steering=radians(10)):
         packet = OffboardPacket()
         packet.type = 1
         packet.subtype = 1886
