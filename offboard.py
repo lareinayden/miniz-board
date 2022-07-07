@@ -7,7 +7,7 @@ from time import clock_gettime_ns, CLOCK_REALTIME
 from math import degrees,radians
 from joystick import Joystick
 
-class OffboardPacket:
+class OffboardPacket(PrintObject):
     seq_no = 0
     packet_size = 64
     def __init__(self):
@@ -15,6 +15,8 @@ class OffboardPacket:
         self.seq_no = None
         self.type = None
         self.subtype = None
+        self.dest_addr = None
+        self.src_addr = None
         self.packet = None
         self.payload = None
         # package encoded ts
@@ -28,7 +30,13 @@ class OffboardPacket:
     def makePacket(self):
         self.seq_no = OffboardPacket.seq_no
         self.ts = int(clock_gettime_ns(CLOCK_REALTIME) / 1000) % 4294967295
-        header = pack('IIHH',self.seq_no,self.ts,self.type,self.subtype)
+        # B: uint8_t
+        # H: uint16_t
+        # I: uint32_t
+        # f: float (4 Byte)
+        # d: double (8 Byte)
+        # x: padding (1 Byte)
+        header = pack('IIBBBB',self.seq_no,self.ts,self.dest_addr,self.src_addr,self.type,self.subtype)
         padding_size = OffboardPacket.packet_size - len(header) - len(self.payload)
         padding = pack('x'*padding_size)
         self.packet = header+self.payload+padding
@@ -38,8 +46,9 @@ class OffboardPacket:
     def parsePacket(self):
         packet = self.packet
         header = packet[:12]
-        self.seq_no,self.ts,self.type,self.subtype = unpack('IIHH',header)
-        return
+        self.seq_no,self.ts,self.dest_addr, self.src_addr,self.type,self.subtype = unpack('IIBBBB',header)
+        self.print_ok('type is',self.type)
+        self.print_ok('subtype is',self.subtype)
         # TODO example: further parsing
         if (self.type == 0):
             # ping packet
@@ -52,6 +61,13 @@ class OffboardPacket:
         if (self.type == 1):
             # command host -> car only
             self.throttle,self.steering = unpack('ff',packet[12:20])
+
+        # parameter
+        if (self.type == 3):
+            if (self.subtype == 0):
+                print(packet)
+                breakpoint()
+                sensor_update,P,I,D = unpack('?fff',packet[12:12+4+3*4])
 
 class Offboard(PrintObject):
     def __init__(self):
@@ -74,12 +90,23 @@ class Offboard(PrintObject):
 
     def main(self):
         self.delay_vec = []
+        self.getParam()
         try:
             while True:
                 self.loop()
         except KeyboardInterrupt:
             self.joystick.quit()
         print_ok("average delay (us) = ", np.mean(self.delay_vec))
+
+    def getParam(self):
+        packet = self.prepareParameterRequestPacket()
+        self.sendPacket(packet)
+        # wait for response
+        response = self.getResponse()
+        self.print_ok("got response", response)
+        # parse packet
+        response_packet = self.parseResponse(response)
+        return
 
     def loop(self):
         # read joystick
@@ -88,8 +115,7 @@ class Offboard(PrintObject):
         print(throttle,steering)
         # prepare packet
         #packet = self.preparePingPacket()
-        #packet = self.prepareCommandPacket(throttle,steering)
-        packet = self.prepareCommandPacket(0.2,steering)
+        packet = self.prepareCommandPacket(throttle,steering)
         # send
         self.sendPacket(packet)
         #self.print_ok("sent packet no.%d"%count)
@@ -122,21 +148,33 @@ class Offboard(PrintObject):
         packet = OffboardPacket()
         packet.type = 0
         packet.subtype = 0
+        packet.dest_addr = 1
+        packet.src_addr = 0
         packet.emptyPayload()
         packet.makePacket()
         return packet
 
-    def prepareCommandPacket(self,throttle=0.0,steering=radians(10)):
+    def prepareCommandPacket(self,throttle=0.0,steering=0.0):
         packet = OffboardPacket()
         packet.type = 1
-        packet.subtype = 1886
+        packet.subtype = 5
+        packet.dest_addr = 1
+        packet.src_addr = 0
         packet.payload = pack('ff',throttle,steering)
+        packet.makePacket()
+        return packet
+
+    def prepareParameterRequestPacket(self):
+        packet = OffboardPacket()
+        packet.type = 3
+        packet.subtype = 2
+        packet.dest_addr = 1
+        packet.src_addr = 0
+        packet.emptyPayload()
         packet.makePacket()
         return packet
         
 if __name__ == '__main__':
     main = Offboard()
     main.main()
-
-
 

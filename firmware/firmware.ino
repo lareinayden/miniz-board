@@ -9,6 +9,7 @@
 // TODO more intuitive indicator light
 // TODO add filter to encoder reading
 // TODO put PWM frequency outside audible range
+// read and send message asynchrously
 
 // network setting
 char ssid[] = "TP-LINK_F4D4";
@@ -20,34 +21,55 @@ unsigned int localPort = 2390;
 char in_buffer[PACKET_SIZE];
 char out_buffer[PACKET_SIZE];
 unsigned long last_packet_ts = 0;
+uint32_t current_seq_no = 0;
 typedef struct {
   uint32_t seq_no;
   uint32_t ts;
-  uint16_t type;
-  uint16_t sub_type;
+  uint8_t dest_addr;
+  uint8_t src_addr;
+  uint8_t type;
+  uint8_t sub_type;
   union {
     // general
     char payload[52];
-    // type 1.x
+    // type 1.x, command packet
     struct {
-      float throttle;
-      float steering;
+      float throttle; // [-1,1]
+      float steering; // in rad
+    };
+    // type 2.0, Sensor Update
+    struct {
+      float steering_command; // in rad
+      float steering_actual;  // in rad
+    };
+    // type 3.0, Parameter Packet
+    struct {
+      bool sensor_update; // 4 bytes due to alignment
+      float steering_P;
+      float steering_I;
+      float steering_D;
     };
   };
 } Packet;
+// params
+bool  param_sensor_update = true;
+float param_steering_P = 100.0;
+float param_steering_I = 0.0;
+float param_steering_D = 0.0;
 
 // board pin layout
 int encoder_s_pin = 14;
+
+// NOTE this is inconsistent with schematic
 // left
-int steer_rev_pin = 3;
+int steer_rev_pin = 2;
 // right
-int steer_fwd_pin = 2;
+int steer_fwd_pin = 3;
 
 int drive_rev_pin = 5;
 int drive_fwd_pin = 6;
 
 // electronics calibration
-float steering_kp = 100;
 // [-1,1]
 float throttle = 0.0;
 // left positive, radians
@@ -61,6 +83,9 @@ float full_right_encoder_value = 410.0;
 float steering_deadzone_rad = 2.5/180.0*PI;
 
 bool flag_failsafe = false;
+
+// sensors
+float = measured_steering_rad;
 
 
 // the setup function runs once when you press reset or power the board
@@ -76,9 +101,6 @@ void blinkTwice(){
   pinMode(encoder_s_pin, INPUT);
   pinMode(steer_rev_pin, OUTPUT);
   pinMode(steer_fwd_pin, OUTPUT);
-  digitalWrite(steer_rev_pin,LOW);
-  digitalWrite(steer_fwd_pin,LOW);
-
   pinMode(drive_rev_pin, OUTPUT);
   pinMode(drive_fwd_pin, OUTPUT);
   // LED blink to indicate we are ready for commands
@@ -132,24 +154,15 @@ void loop() {
     last_packet_ts = millis();
     flag_failsafe = false;
 
-    // response
-    buildResponsePacket();
-    int retval = sendResponsePacket();
-    /*
-    if (retval){
-      Serial.println("sent success");
-    } else {
-      Serial.println("sent FAIL");
-    }
-    */
+    // response is handled by packet parser
   }
 
   if (millis() - last_packet_ts > 100){
     throttle = 0;
     steering = 0;
     flag_failsafe = true;
-    Serial.print(millis());
-    Serial.println(" failsafe");
+    //Serial.print(millis());
+    //Serial.println(" failsafe");
   }
 
   actuateControls();
@@ -165,32 +178,116 @@ void parsePacket(){
   Serial.println(p->seq_no);
   Serial.print("ts: ");
   Serial.println(p->ts);
+  Serial.print("dest_addr: ");
+  Serial.println(p->dest_addr);
+  Serial.print("src_addr: ");
+  Serial.println(p->src_addr);
   Serial.print("type: ");
   Serial.println(p->type);
   Serial.print("subtype: ");
   Serial.println(p->sub_type);
   */
-  if (p->type == 1){
-    /*
-    Serial.print("throttle: ");
-    Serial.println(p->throttle,5);
-    Serial.print("steering: ");
-    Serial.println(p->steering,5);
-    */
-    steering = p->steering;
-    throttle = p->throttle;
+  switch (p->type){
+    case 0:
+      parsePingPacket();
+      break;
+    case 1:
+      parseCommandPacket();
+      break;
+    case 2:
+      parseSensorPacket();
+      break;
+    case 3:
+      parseParamPacket();
+      break;
+   default:
+      // should never reach here
+      break;
   }
+}
+
+void parsePingPacket(){
+  //Packet *p = (Packet *) in_buffer;
+  buildEchoPacket();
+  sendResponsePacket();
+}
+void parseSensorPacket(){
+  Packet *p = (Packet *) in_buffer;
+  p->steering_command = steering;
+  p->steering_actual = measured_steering_rad;
+  buildHeader(2,0);
+  sendResponsePacket();
+}
+void parseCommandPacket(){
+  /*
+  Serial.print("throttle: ");
+  Serial.println(p->throttle,5);
+  Serial.print("steering: ");
+  Serial.println(p->steering,5);
+  */
+  Packet *p = (Packet *) in_buffer;
+  steering = p->steering;
+  throttle = p->throttle;
+
+  buildEchoPacket();
+  sendResponsePacket();
+}
+
+void parseParamPacket(){
+  Packet *p = (Packet *) in_buffer;
+  if (p->sub_type == 3){
+    param_sensor_update = p->sensor_update;
+    param_steering_P = p->steering_P;
+    param_steering_I = p->steering_I;
+    param_steering_D = p->steering_D;
+    Serial.print("setting new param: ");
+    Serial.print(" sensor_update: ");
+    Serial.print(param_sensor_update);
+    Serial.print(" steering_P: ");
+    Serial.print(param_steering_P);
+    Serial.println();
+  }
+  // all subtype get parameter printout 3.0
+  p = (Packet *) out_buffer;
+  p->sensor_update = param_sensor_update;
+  p->steering_P = param_steering_P;
+  p->steering_I = param_steering_I;
+  p->steering_D = param_steering_D;
+  buildHeader(3,0);
+  sendResponsePacket();
 }
 
 // build response packet, save in out_buffer
 // here we just echo the packet
-void buildResponsePacket(){
+void buildEchoPacket(){
   memcpy(out_buffer, in_buffer, PACKET_SIZE);
+  Packet *p = (Packet *) out_buffer;
+  p->type = 0;
+  p->sub_type = 1;
+  p->dest_addr = 0;
+  p->src_addr = 1;
+}
+
+void buildHeader(uint8_t type, uint8_t subtype){
+  Packet *p = (Packet *) out_buffer;
+  p->seq_no = current_seq_no++;
+  p->ts = micros();
+  p->dest_addr = 0;
+  p->src_addr = 1;
+  p->type = type;
+  p->sub_type = subtype;
 }
 
 int sendResponsePacket(){
   Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-  Udp.write(in_buffer,PACKET_SIZE);
+  Udp.write(out_buffer,PACKET_SIZE);
+  /*
+  if (retval){
+    Serial.println("sent success");
+  } else {
+    Serial.println("sent FAIL");
+  }
+  */
   return Udp.endPacket();
 }
 
@@ -263,19 +360,13 @@ void actuateControls(){
     analogWrite(steer_rev_pin, 255);
     return;
   }
-  Serial.print(millis());
-  Serial.print("  ");
 
   if (abs(throttle) < throttle_deadzone){
     analogWrite(drive_fwd_pin, 0);
     analogWrite(drive_rev_pin, 0);
-    digitalWrite(LED_BUILTIN,1);
-    Serial.print("brake ");
   } else {
-    digitalWrite(LED_BUILTIN,0);
     int throttle_value = (int)fmap(throttle, -1.0, 1.0, -255.0, 255.0);
     throttle_value = constrain(throttle_value, -255, 255);
-    Serial.print(throttle_value);
     if (throttle_value > 0) {
       analogWrite(drive_fwd_pin, throttle_value);
       analogWrite(drive_rev_pin, 0);
@@ -284,13 +375,9 @@ void actuateControls(){
       analogWrite(drive_fwd_pin, 0);
     }
   }
-  Serial.println();
-  //FIXME XXX
-  return;
-
 
   float raw_encoder = analogRead(encoder_s_pin);
-  float measured_steering_rad = fmap(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
+  measured_steering_rad = fmap(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
   measured_steering_rad = constrain(measured_steering_rad, full_right_angle_rad, full_left_angle_rad);
 
   float err = steering - measured_steering_rad;
@@ -308,10 +395,10 @@ void actuateControls(){
     analogWrite(steer_fwd_pin, 0);
     analogWrite(steer_rev_pin, 0);
   } else if (err > 0){
-    analogWrite(steer_rev_pin, constrain(err*steering_kp, 0,255));
+    analogWrite(steer_rev_pin, constrain(err*param_steering_P, 0,255));
     analogWrite(steer_fwd_pin, 0);
   } else if (err < 0){
-    analogWrite(steer_fwd_pin, constrain(-err*steering_kp, 0,255));
+    analogWrite(steer_fwd_pin, constrain(-err*param_steering_P, 0,255));
     analogWrite(steer_rev_pin, 0);
   }
 
