@@ -66,7 +66,6 @@ class OffboardPacket(PrintObject):
         if (self.type == 3):
             if (self.subtype == 0):
                 print(packet)
-                breakpoint()
                 sensor_update,P,I,D = unpack('?fff',packet[12:12+4+3*4])
 
 class Offboard(PrintObject):
@@ -79,7 +78,7 @@ class Offboard(PrintObject):
     def initSocket(self):
         self.local_ip = "192.168.0.101"
         self.local_port = 58999
-        self.car_ip = "192.168.0.100"
+        self.car_ip = "192.168.0.12"
         self.car_port = 2390
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind((self.local_ip, self.local_port))

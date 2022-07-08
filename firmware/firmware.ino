@@ -85,7 +85,7 @@ float steering_deadzone_rad = 2.5/180.0*PI;
 bool flag_failsafe = false;
 
 // sensors
-float = measured_steering_rad;
+float measured_steering_rad;
 
 
 // the setup function runs once when you press reset or power the board
@@ -381,7 +381,6 @@ void actuateControls(){
   measured_steering_rad = constrain(measured_steering_rad, full_right_angle_rad, full_left_angle_rad);
 
   float err = steering - measured_steering_rad;
-  /*
   Serial.print("raw: ");
   Serial.print(raw_encoder);
   Serial.print(" goal: ");
@@ -389,7 +388,6 @@ void actuateControls(){
   Serial.print(" actual: ");
   Serial.print(measured_steering_rad/PI*180.0,5);
   Serial.println();
-  */
 
   if (abs(err) < steering_deadzone_rad){
     analogWrite(steer_fwd_pin, 0);
