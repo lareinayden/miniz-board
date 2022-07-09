@@ -39,8 +39,8 @@ typedef struct {
     };
     // type 2.0, Sensor Update
     struct {
-      float steering_command; // in rad
-      float steering_actual;  // in rad
+      float steering_requested; // in rad
+      float steering_measured;  // in rad
     };
     // type 3.0, Parameter Packet
     struct {
@@ -85,7 +85,9 @@ float steering_deadzone_rad = 2.5/180.0*PI;
 bool flag_failsafe = false;
 
 // sensors
-float measured_steering_rad;
+// steering_requested differs from steering in that it is synchronized to steering_measured
+float steering_requested;
+float steering_measured;
 
 
 // the setup function runs once when you press reset or power the board
@@ -208,14 +210,12 @@ void parsePacket(){
 
 void parsePingPacket(){
   //Packet *p = (Packet *) in_buffer;
-  buildEchoPacket();
+  buildPingResponsePacket();
   sendResponsePacket();
 }
+// send sensor response
 void parseSensorPacket(){
-  Packet *p = (Packet *) in_buffer;
-  p->steering_command = steering;
-  p->steering_actual = measured_steering_rad;
-  buildHeader(2,0);
+  buildSensorResponsePacket();
   sendResponsePacket();
 }
 void parseCommandPacket(){
@@ -229,7 +229,7 @@ void parseCommandPacket(){
   steering = p->steering;
   throttle = p->throttle;
 
-  buildEchoPacket();
+  buildSensorResponsePacket();
   sendResponsePacket();
 }
 
@@ -257,15 +257,16 @@ void parseParamPacket(){
   sendResponsePacket();
 }
 
-// build response packet, save in out_buffer
-// here we just echo the packet
-void buildEchoPacket(){
-  memcpy(out_buffer, in_buffer, PACKET_SIZE);
+void buildPingResponsePacket(){
+  buildHeader(0,1);
   Packet *p = (Packet *) out_buffer;
-  p->type = 0;
-  p->sub_type = 1;
-  p->dest_addr = 0;
-  p->src_addr = 1;
+}
+
+void buildSensorResponsePacket(){
+  buildHeader(2,0);
+  Packet *p = (Packet *) out_buffer;
+  p->steering_requested = steering_requested;
+  p->steering_measured = steering_measured;
 }
 
 void buildHeader(uint8_t type, uint8_t subtype){
@@ -377,16 +378,17 @@ void actuateControls(){
   }
 
   float raw_encoder = analogRead(encoder_s_pin);
-  measured_steering_rad = fmap(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
-  measured_steering_rad = constrain(measured_steering_rad, full_right_angle_rad, full_left_angle_rad);
+  steering_measured = fmap(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
+  steering_measured = constrain(steering_measured, full_right_angle_rad, full_left_angle_rad);
 
-  float err = steering - measured_steering_rad;
+  float err = steering - steering_measured;
+  steering_requested = steering;
   Serial.print("raw: ");
   Serial.print(raw_encoder);
   Serial.print(" goal: ");
   Serial.print(steering/PI*180.0,5);
   Serial.print(" actual: ");
-  Serial.print(measured_steering_rad/PI*180.0,5);
+  Serial.print(steering_measured/PI*180.0,5);
   Serial.println();
 
   if (abs(err) < steering_deadzone_rad){

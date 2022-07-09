@@ -9,6 +9,7 @@ from math import degrees,radians
 from threading import Thread,Event,Lock
 import select
 import queue
+import matplotlib.pyplot as plt
 
 # NOTE ideas to try for performance
 # different sockets for incoming/outgoing messages
@@ -63,8 +64,12 @@ class OffboardPacket(PrintObject):
                 # ping response
                 pass
         if (self.type == 1):
-            # command host -> car only
             self.throttle,self.steering = unpack('ff',packet[12:20])
+
+        # sensor update
+        if (self.type == 2):
+            self.steering_requested,self.steering_measured = unpack('ff',packet[12:20])
+            self.print_info('sensor update',self.steering_requested, self.steering_measured)
 
         # parameter
         if (self.type == 3):
@@ -79,13 +84,18 @@ class OffboardPacket(PrintObject):
                 self.steering_P = steering_P
                 self.steering_I = steering_I
                 self.steering_D = steering_D
+        return self.type
 
 class Offboard(PrintObject):
+    available_local_port = 58998
     def __init__(self,car_ip=None,car_port=2390):
         #self.print_debug_enable()
         self.car_ip = car_ip
         self.car_port = car_port
         self.initSocket()
+        self.initLog()
+
+
         # threading
         self.child_threads = []
         # ready to take new command
@@ -102,16 +112,26 @@ class Offboard(PrintObject):
         comm_thread.start()
         self.child_threads.append(comm_thread)
         self.setup()
-        
 
     def initSocket(self):
         self.local_ip = "192.168.0.101"
-        self.local_port = 58999
+        self.local_port = Offboard.available_local_port
+        Offboard.available_local_port += 1
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # non-blocking
         sock.setblocking(0)
         sock.bind((self.local_ip, self.local_port))
         self.sock = sock
+
+    def initLog(self):
+        self.log_t_vec = []
+        self.steering_requested_vec = []
+        self.steering_measured_vec = []
+
+    def final(self):
+        plt.plot(self.log_t_vec, self.steering_requested_vec)
+        plt.plot(self.log_t_vec, self.steering_measured_vec)
+        plt.show()
 
     # one-time process
     def setup(self):
@@ -181,8 +201,15 @@ class Offboard(PrintObject):
     def parseResponse(self,data):
         packet = OffboardPacket()
         packet.packet = data
-        packet.parsePacket()
+        packet_type = packet.parsePacket()
         self.last_response_ts = int(clock_gettime_ns(CLOCK_REALTIME) / 1000) % 4294967295
+
+        # sensor update
+        if (packet_type == 2):
+            self.log_t_vec.append(time())
+            self.steering_requested_vec.append(packet.steering_requested)
+            self.steering_measured_vec.append(packet.steering_measured)
+            
         return packet
 
     def preparePingPacket(self):
