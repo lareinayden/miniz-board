@@ -13,11 +13,13 @@ class JoystickDemo(PrintObject):
         joystick = Joystick()
         try:
             while True:
-                sleep(0.05)
-                throttle = joystick.throttle
-                steering = joystick.steering * radians(26.1)
-                self.print_info('command:',throttle,steering)
+                self.offboard.ready.wait()
+                self.offboard.ready.clear()
+                self.offboard.throttle = joystick.throttle
+                self.offboard.steering = joystick.steering * radians(26.1)
+                self.print_info('command:',self.offboard.throttle,self.offboard.steering)
         except KeyboardInterrupt:
+            self.print_info("waiting to quit")
             joystick.quit()
             self.offboard.quit()
 

@@ -18,7 +18,9 @@ class Joystick:
         print_ok("Success")
 
         self.child_threads = []
-        self.child_threads.append(Thread(name='joystick', target=self.updateDaemon))
+        thread = Thread(name='joystick', target=self.updateDaemon)
+        thread.daemon = True
+        self.child_threads.append(thread)
         self.child_threads[-1].start()
 
     def quit(self):
