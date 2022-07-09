@@ -82,7 +82,7 @@ class OffboardPacket(PrintObject):
 
 class Offboard(PrintObject):
     def __init__(self,car_ip=None,car_port=2390):
-        self.print_debug_enable()
+        #self.print_debug_enable()
         self.car_ip = car_ip
         self.car_port = car_port
         self.initSocket()
@@ -120,51 +120,41 @@ class Offboard(PrintObject):
     def __commThreadFunction( self, arg ):
         self.print_debug('commThread started')
         while not self.flag_quit.is_set():
-            #self.print_debug('loop')
-            # read all packets from buffer
-            try:
-                while True:
-                    #self.print_debug('checking inbound packets')
-                    # read inbound packets
-                    data, addr = self.sock.recvfrom( OffboardPacket.packet_size ) # read 1 packet
-                    if( len( data ) > 0 ):
-                        assert len( data ) == OffboardPacket.packet_size
-                        self.parseResponse( data )
-                        #self.print_debug('got packet')
-            except socket.timeout:
-                self.print_debug('no more incoming packets')
-            except BlockingIOError:
-                pass
-
             # send control command
-            #self.print_debug('sending command packet')
             packet = self.prepareCommandPacket(self.throttle,self.steering)
             packet.makePacket()
             try:
                 select.select([],[self.sock],[])
                 self.sendPacket(packet)
-                #self.print_debug('sent command packet')
             except BlockingIOError:
-                self.print_debug('resource unavailable')
+                self.print_warning('resource unavailable')
 
             # send all pending packets
             # packets in queue may be from another thread
             try:
                 while True:
-                    #self.print_debug('checking outgoing packet')
-                    # TODO add a wait here
                     packet = self.out_queue.get_nowait()
                     # makePacket() fills in timestamp and seq_no, call right before send
                     packet.makePacket()
                     self.sendPacket(packet)
-                    #self.print_debug('sent packet')
             except queue.Empty:
                 pass
-                #self.print_debug('queue depleted')
+
+            # read all packets from buffer
+            try:
+                # wait for at least one packet before sending new commands
+                select.select([self.sock],[],[],0.1)
+                while True:
+                    data, addr = self.sock.recvfrom( OffboardPacket.packet_size ) # read 1 packet
+                    if( len( data ) > 0 ):
+                        assert len( data ) == OffboardPacket.packet_size
+                        self.parseResponse( data )
+                        #self.print_debug('got packet')
+            except BlockingIOError:
+                pass
 
             # ready to take new commands
             self.ready.set()
-            sleep(0.01)
         self.print_debug('comm thread quit')
 
 
