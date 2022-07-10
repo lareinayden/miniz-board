@@ -255,6 +255,8 @@ void parseParamPacket(){
   p->steering_D = param_steering_D;
   buildHeader(3,0);
   sendResponsePacket();
+  Serial.println(p->subtype);
+  Serial.println("reporting param: ");
 }
 
 void buildPingResponsePacket(){
@@ -383,6 +385,7 @@ void actuateControls(){
 
   float err = steering - steering_measured;
   steering_requested = steering;
+  /*
   Serial.print("raw: ");
   Serial.print(raw_encoder);
   Serial.print(" goal: ");
@@ -390,6 +393,7 @@ void actuateControls(){
   Serial.print(" actual: ");
   Serial.print(steering_measured/PI*180.0,5);
   Serial.println();
+  */
 
   if (abs(err) < steering_deadzone_rad){
     analogWrite(steer_fwd_pin, 0);

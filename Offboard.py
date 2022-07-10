@@ -194,6 +194,17 @@ class Offboard(PrintObject):
         self.out_queue.put_nowait(packet)
         # TODO add Event to wait for response
 
+    def setParam(self,p,i,d):
+        self.print_info('setting parameters')
+        packet = OffboardPacket()
+        packet.type = 3
+        packet.subtype = 3
+        packet.dest_addr = 1
+        packet.src_addr = 0
+        packet.payload = pack('?fff',True,p,i,d)
+        self.out_queue.put_nowait(packet)
+        return packet
+
     def sendPacket(self,packet):
         sent_size = self.sock.sendto(packet.packet, (self.car_ip, self.car_port))
         self.last_sent_ts = packet.ts

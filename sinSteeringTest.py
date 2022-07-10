@@ -12,8 +12,15 @@ class SinSteeringTest(PrintObject):
         return
 
     def main(self):
+        self.car.ready.wait()
+        self.car.ready.clear()
+        self.car.setParam(200.0,1,2)
+        self.car.ready.wait()
+        self.car.ready.clear()
+
         try:
-            while True:
+            sleep(20)
+            while False:
                 self.car.ready.wait()
                 self.car.ready.clear()
                 self.car.throttle = 0.0
