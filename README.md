@@ -12,6 +12,10 @@ The platform is capable of
 
 This platform is currently used by the VIP program at Georgia Tech under supervision of Dr. Tsiotras. For more information on the program, please contact the authors
 
+## Pictures
+![Custom PCB](http://https://github.com/Nick-Zhang1996/miniz-board/blob/main/pics/p2.png)
+![Platform with Arduino installed](http://https://github.com/Nick-Zhang1996/miniz-board/blob/main/pics/p1.png)
+
 #### Author
 Matthrew Kelsey(original), Nick Zhang(current maintainer)
 
