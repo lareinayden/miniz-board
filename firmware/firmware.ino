@@ -7,13 +7,7 @@
 #include "packet.h"
 #include "status_light.h"
 
-//TODO add parameter server, enable remote setting
-// TODO complete protocol
-// TODO report mode change and status
-// TODO more intuitive indicator light
-// TODO add filter to encoder reading
-// TODO put PWM frequency outside audible range
-// read and send message asynchrously
+// TODO use SAMD timer interrupt to achieve higher control frequency
 
 unsigned int localPort = 2390;
 unsigned long last_packet_ts = 0;
@@ -41,7 +35,11 @@ float full_left_angle_rad = 26.1/180.0*PI;
 float full_right_angle_rad = -26.1/180.0*PI;
 float full_left_encoder_value = 630.0;
 float full_right_encoder_value = 410.0;
-float steering_deadzone_rad = 2.5/180.0*PI;
+float steering_deadzone_rad = 1.0/180.0*PI;
+unsigned long last_pid_ts = 0;
+float last_err = 0.0;
+float steering_integral = 0.0;
+float steering_integral_limit = 1.0;
 
 bool flag_failsafe = false;
 StatusLed led;
@@ -178,17 +176,27 @@ void actuateControls(){
   Serial.print(steering_measured/PI*180.0,5);
   Serial.println();
   */
+  // filter
+  float dt = (float)(millis() - last_packet_ts)/1000.0;
+  float freq = 10.0;
+  float alfa = (2*PI*dt*freq)/(2*PI*dt*freq + 1.0);
+  err = (1.0-alfa)*last_err + alfa*err;
+  steering_integral += err * dt;
+  steering_integral = constrain(steering_integral, -steering_integral_limit, steering_integral_limit);
+  float output = err * param_steering_P + steering_integral * param_steering_I + (err - last_err)/dt * param_steering_D;
 
   if (abs(err) < steering_deadzone_rad){
     analogWrite(steer_fwd_pin, 0);
     analogWrite(steer_rev_pin, 0);
-  } else if (err > 0){
+  } else if (output > 0){
     analogWrite(steer_rev_pin, constrain(err*param_steering_P, 0,255));
     analogWrite(steer_fwd_pin, 0);
-  } else if (err < 0){
+  } else if (output < 0){
     analogWrite(steer_fwd_pin, constrain(-err*param_steering_P, 0,255));
     analogWrite(steer_rev_pin, 0);
   }
 
+  last_pid_ts = millis();
+  last_err = err;
 }
 

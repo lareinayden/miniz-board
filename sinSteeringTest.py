@@ -13,16 +13,16 @@ class SinSteeringTest(PrintObject):
 
     def main(self):
         try:
-            throttle = 0.3
-            self.car.setParam(200.0,0,0)
+            throttle = 0.35
+            self.car.setParam(400.0,0,10)
             t0 = time()
-            dt = 2
+            dt = 1.5
             while time() < t0 + dt:
                 self.car.ready.wait()
                 self.car.ready.clear()
                 self.car.throttle = throttle
                 self.car.steering = sin(2*pi/self.T*time()) * radians(26.1)
-                self.print_info('command:',self.car.throttle,self.car.steering)
+                #self.print_info('command:',self.car.throttle,self.car.steering)
 
             self.old_t_vec = self.car.log_t_vec
             self.old_steering_requested_vec = self.car.steering_requested_vec
@@ -31,7 +31,7 @@ class SinSteeringTest(PrintObject):
             self.car.steering_requested_vec = []
             self.car.steering_measured_vec = []
 
-            self.car.setParam(300.0,0,0)
+            self.car.setParam(400.0,0,40)
             t0 = time()
 
             while time() < t0 + dt:
@@ -39,7 +39,7 @@ class SinSteeringTest(PrintObject):
                 self.car.ready.clear()
                 self.car.throttle = throttle
                 self.car.steering = sin(2*pi/self.T*time()) * radians(26.1)
-                self.print_info('command:',self.car.throttle,self.car.steering)
+                #self.print_info('command:',self.car.throttle,self.car.steering)
 
             self.new_t_vec = self.car.log_t_vec
             self.new_steering_requested_vec = self.car.steering_requested_vec
@@ -59,7 +59,7 @@ class SinSteeringTest(PrintObject):
         plt.show()
 
 if __name__ == '__main__':
-    T = 1.0
+    T = 0.7
     main = SinSteeringTest(T) 
     main.main()
     main.final()

@@ -68,7 +68,7 @@ class OffboardPacket(PrintObject):
         # sensor update
         if (self.type == 2):
             self.steering_requested,self.steering_measured = unpack('ff',packet[12:20])
-            self.print_info('sensor update',self.steering_requested, self.steering_measured)
+            #self.print_info('sensor update',self.steering_requested, self.steering_measured)
 
         # parameter
         if (self.type == 3):
