@@ -9,7 +9,6 @@ from math import degrees,radians
 from threading import Thread,Event,Lock
 import select
 import queue
-import matplotlib.pyplot as plt
 
 # NOTE ideas to try for performance
 # different sockets for incoming/outgoing messages
@@ -128,10 +127,6 @@ class Offboard(PrintObject):
         self.steering_requested_vec = []
         self.steering_measured_vec = []
 
-    def final(self):
-        plt.plot(self.log_t_vec, self.steering_requested_vec)
-        plt.plot(self.log_t_vec, self.steering_measured_vec)
-        plt.show()
 
     # one-time process
     def setup(self):
