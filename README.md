@@ -16,6 +16,16 @@ This platform is currently used by the VIP program at Georgia Tech under supervi
 ![Custom PCB](https://github.com/Nick-Zhang1996/miniz-board/blob/main/pics/p2.png)
 ![Platform with Arduino installed](https://github.com/Nick-Zhang1996/miniz-board/blob/main/pics/p1.png)
 
+### TO-DO
+Several things left undone:
+Program
+ * Use SAMD timer interrupt to handle PWM generation, to move PWM frequency to a higher inaudible range
+ * Run PID control loop for steering servo at higher frequency
+
+Circuit
+ * Add sensor for motor current
+
 #### Author
 Matthrew Kelsey(original), Nick Zhang(current maintainer)
+
 
