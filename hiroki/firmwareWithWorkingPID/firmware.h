@@ -2,6 +2,4 @@
 #define _FIRMWARE_H_
 extern volatile float throttle;
 extern volatile float steering;
-
-void PIDControl();
 #endif

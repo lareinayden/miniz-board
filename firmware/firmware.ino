@@ -6,8 +6,7 @@
 #include "network.h"
 #include "packet.h"
 #include "status_light.h"
-
-// TODO use SAMD timer interrupt to achieve higher control frequency
+#include "isr_timer.h"
 
 unsigned int localPort = 2390;
 unsigned long last_packet_ts = 0;
@@ -26,9 +25,9 @@ int drive_fwd_pin = 6;
 
 // electronics calibration
 // [-1,1]
-float throttle = 0.0;
+volatile float throttle = 0.0;
 // left positive, radians
-float steering = 0.0;
+volatile float steering = 0.0;
 float throttle_deadzone = 0.05;
 
 float full_left_angle_rad = 26.1/180.0*PI;
@@ -57,6 +56,7 @@ void setup() {
   led.off();
   setupWifi();
   Udp.begin(localPort);
+  timerSetup();
 }
 
 void blinkTwice(){
@@ -146,6 +146,7 @@ void actuateControls(){
     return;
   }
 
+  // throttle control
   if (abs(throttle) < throttle_deadzone){
     analogWrite(drive_fwd_pin, 0);
     analogWrite(drive_rev_pin, 0);
@@ -160,7 +161,15 @@ void actuateControls(){
       analogWrite(drive_fwd_pin, 0);
     }
   }
+}
 
+void PIDControl(){ 
+  Serial.print("pid");
+  Serial.println(millis());
+  // XXX
+  return;
+
+  // Steering PID control
   float raw_encoder = analogRead(encoder_s_pin);
   steering_measured = fmap(raw_encoder, full_left_encoder_value, full_right_encoder_value, full_left_angle_rad,full_right_angle_rad);
   steering_measured = constrain(steering_measured, full_right_angle_rad, full_left_angle_rad);
@@ -183,6 +192,7 @@ void actuateControls(){
   err = (1.0-alfa)*last_err + alfa*err;
   steering_integral += err * dt;
   steering_integral = constrain(steering_integral, -steering_integral_limit, steering_integral_limit);
+  // PID
   float output = err * param_steering_P + steering_integral * param_steering_I + (err - last_err)/dt * param_steering_D;
 
   if (abs(err) < steering_deadzone_rad){
