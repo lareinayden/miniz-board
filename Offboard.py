@@ -90,11 +90,14 @@ class OffboardPacket(PrintObject):
 class Offboard(PrintObject):
     available_local_port = 58998
     def __init__(self,car_ip=None,car_port=2390):
-        #self.print_debug_enable()
+        self.print_debug_enable()
         self.car_ip = car_ip
         self.car_port = car_port
         self.initSocket()
         self.initLog()
+
+        self.ts = 0
+        self.dt_vec = []
 
 
         # threading
@@ -115,7 +118,7 @@ class Offboard(PrintObject):
         self.setup()
 
     def initSocket(self):
-        self.local_ip = "192.168.0.101"
+        self.local_ip = "192.168.10.3"
         self.local_port = Offboard.available_local_port
         Offboard.available_local_port += 1
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -166,7 +169,10 @@ class Offboard(PrintObject):
                     if( len( data ) > 0 ):
                         assert len( data ) == OffboardPacket.packet_size
                         self.parseResponse( data )
-                        #self.print_debug('got packet')
+                        dt = time()-self.ts
+                        self.dt_vec.append(dt)
+                        self.ts = time()
+                        self.print_debug(f'got packet, dt={dt}')
             except BlockingIOError:
                 pass
 
