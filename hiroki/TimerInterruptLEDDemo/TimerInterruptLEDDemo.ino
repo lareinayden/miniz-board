@@ -116,7 +116,7 @@ SAMDTimer ITimer(SELECTED_TIMER);
 // Each SAMD_ISR_Timer can service 16 different ISR-based timers
 SAMD_ISR_Timer ISR_Timer;
 
-#define TIMER_INTERVAL_1S             2L
+#define TIMER_INTERVAL_1S             1000L
 #define TIMER_INTERVAL_2S             2000L
 #define TIMER_INTERVAL_5S             5000L
 

@@ -54,8 +54,9 @@ void setup() {
   pinMode(drive_fwd_pin, OUTPUT);
   led.init();
   led.off();
-  setupWifi();
-  Udp.begin(localPort);
+  //FIXME
+  //setupWifi();
+  //Udp.begin(localPort);
   timerSetup();
 }
 
@@ -93,6 +94,8 @@ void setupWifi(){
 }
 
 void loop() {
+  // FIXME
+  return;
   led.update();
 //  Serial.println(millis() - loop_time);
 //  loop_time = millis();
