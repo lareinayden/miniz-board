@@ -99,8 +99,12 @@ void loop() {
   led.update();
 //  Serial.println(millis() - loop_time);
 //  loop_time = millis();
-  unsigned long t0 = micros();
+  unsigned long t0 = millis();
   int packet_size = Udp.parsePacket();
+  if (millis()-t0 > 2){
+    Serial.print("---- unexpected latency ---");
+    Serial.println(millis()-t0);
+  }
   
   // process incoming packet
   if (packet_size) {

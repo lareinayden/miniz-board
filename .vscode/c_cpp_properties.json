@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${env:HOME}/Arduino/libraries/**",
+                "${env:HOME}/arduino-1.8.19/tools/**",
+                "${env:HOME}/arduino-1.8.19/hardware/arduino/avr/**",
+                "${env:HOME}/arduino-1.8.19/hardware/tools/**",
+                "${env:HOME}/arduino-1.8.19/hardware/arduino/avr/cores/arduino"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

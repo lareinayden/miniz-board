@@ -163,7 +163,9 @@ class OneWayNetworkTest(PrintObject):
         
 
 if __name__=="__main__":
-    main = OneWayNetworkTest("192.168.10.102",2390)
-    for i in range(1000):
+    main = OneWayNetworkTest("192.168.10.100",2390)
+    freq = 100
+    for i in range(100):
+        main.throttle = i/100
         main.sendTestPacket()
-        sleep(0.01)
+        sleep(1/freq)
