@@ -1,15 +1,18 @@
-void setup() {
-  
-}
+// source https://shawnhymel.com/1710/arduino-zero-samd21-raw-pwm-using-cmsis/
+// also check https://forum.arduino.cc/t/changing-arduino-zero-pwm-frequency/334231/3
 
-void pwmGenerator(int pinNumber, int throttleValue) {
+void pwmGenerator(int pinNumber, float throttleValue) {
   // Number to count to with PWM (TOP value). Frequency can be calculated by
   // freq = GCLK4_freq / (TCC0_prescaler * (1 + TOP_value))
-  // With TOP of 47, we get a 1 MHz square wave in this example
-    uint32_t period = 48 - 1;
+  /// TOP = (clock freq)/(desired freq)/prescaler - 1
+  // TOP = 2400-1, freq = 20k
+  // TOP = 48-1, freq = 1M
+  // resolution = log(TOP)/log(2)
 
-    int divider = 255 / throttleValue;
-    Serial.println(divider);
+    uint32_t period = 2400 - 1;
+
+    //int divider = 255 / throttleValue;
+    //Serial.println(divider);
     
     // Because we are using TCC0, limit period to 24 bits
     period = ( period < 0x00ffffff ) ? period : 0x00ffffff;
@@ -43,10 +46,10 @@ void pwmGenerator(int pinNumber, int throttleValue) {
     TCC0->PER.reg = period;
     while (TCC0->SYNCBUSY.bit.PER);
   
- 
     // n for CC[n] is determined by n = x % 4 where x is from WO[x]
     //dutyCycle set up
-    TCC0->CC[2].reg = period / divider; 
+    //TCC0->CC[2].reg = period / divider; 
+    TCC0->CC[2].reg = int(throttleValue * (period-1));
     while (TCC0->SYNCBUSY.bit.CC2);
 
     //working pins are 10, 16, 18, 20
@@ -117,7 +120,9 @@ void pwmGenerator(int pinNumber, int throttleValue) {
     TCC0->CTRLA.reg |= (TCC_CTRLA_ENABLE);
     while (TCC0->SYNCBUSY.bit.ENABLE);              // Wait for synchronization
 }
+void setup() {
+  pwmGenerator(16, 0.7);
+}
 
 void loop() {
-  pwmGenerator(16, 64);
 }
