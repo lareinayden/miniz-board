@@ -3,14 +3,6 @@
 #include "SAMDTimerInterrupt.h"
 #include "SAMD_ISR_Timer.h"
 
-#if (TIMER_INTERRUPT_USING_SAMD21)
-// Init SAMD timer TIMER_TCC
-//SAMDTimer ITimer(TIMER_TC4);
-//SAMDTimer ITimer(TIMER_TC5);
-//SAMDTimer ITimer(TIMER_TCC);
-//SAMDTimer ITimer(TIMER_TCC1);
-//SAMDTimer ITimer(TIMER_TCC2);
-#endif
 // Depending on the board, you can select SAMD21 Hardware Timer from TC3, TC4, TC5, TCC, TCC1 or TCC2
 // SAMD51 Hardware Timer only TC3
 // Init SAMD timer TIMER_TC3 
@@ -34,6 +26,7 @@ void timerSetup(){
   }
 
   // You can use up to 16 timer for each ISR_Timer
-  ISR_Timer.setInterval(1000L,  PIDControl);
+  // unit is milliseconds
+  ISR_Timer.setInterval(2L,  PIDControl);
 }
 

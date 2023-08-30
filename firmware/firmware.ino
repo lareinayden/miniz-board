@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
@@ -95,6 +96,7 @@ void setupWifi(){
 
 void loop() {
   // FIXME
+  delay(1000);
   return;
   led.update();
 //  Serial.println(millis() - loop_time);
@@ -167,8 +169,7 @@ void actuateControls(){
 }
 
 void PIDControl(){ 
-  Serial.print("pid");
-  Serial.println(millis());
+  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   // XXX
   return;
 
