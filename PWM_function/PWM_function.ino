@@ -81,7 +81,7 @@ void pwmSet(int pinNumber, float duty_cycle){
       // Even pin num (pin_no = 2*n): use PMUXE
       // PMUX[x]: here x = pin_no / 2
       // for more detail check link in top of file
-      PORT->Group[PORTB].PMUX[5].reg |= PORT_PMUX_PMUXO_F;
+      PORT->Group[PORTB].PMUX[11 >> 1].reg |= PORT_PMUX_PMUXO_F;
       break;
 
     case 2:
@@ -90,7 +90,7 @@ void pwmSet(int pinNumber, float duty_cycle){
       //PORT->Group[PORTB].DIRSET.reg = PORT_PB10;      // Set pin as output
       //PORT->Group[PORTB].OUTCLR.reg = PORT_PB10;      // Set pin to low
       PORT->Group[PORTB].PINCFG[10].bit.PMUXEN = 1;
-      PORT->Group[PORTB].PMUX[5].reg |= PORT_PMUX_PMUXE_F;
+      PORT->Group[PORTB].PMUX[10 >> 1].reg |= PORT_PMUX_PMUXE_F;
       break;
 
     case 5:
@@ -99,7 +99,7 @@ void pwmSet(int pinNumber, float duty_cycle){
       //PORT->Group[PORTA].DIRSET.reg = PORT_PA05;      // Set pin as output
       //PORT->Group[PORTA].OUTCLR.reg = PORT_PA05;      // Set pin to low
       PORT->Group[PORTA].PINCFG[5].bit.PMUXEN = 1;
-      PORT->Group[PORTA].PMUX[2].reg |= PORT_PMUX_PMUXO_E;
+      PORT->Group[PORTA].PMUX[5 >> 1].reg |= PORT_PMUX_PMUXO_E;
       break;
 
     case 6:
@@ -108,7 +108,25 @@ void pwmSet(int pinNumber, float duty_cycle){
       //PORT->Group[PORTA].DIRSET.reg = PORT_PA04;      // Set pin as output
       //PORT->Group[PORTA].OUTCLR.reg = PORT_PA04;      // Set pin to low
       PORT->Group[PORTA].PINCFG[4].bit.PMUXEN = 1;
-      PORT->Group[PORTA].PMUX[2].reg |= PORT_PMUX_PMUXE_E;
+      PORT->Group[PORTA].PMUX[4 >> 1].reg |= PORT_PMUX_PMUXE_E;
+      break;
+
+    case 9:
+      // PA20 TCC0/WO[6] -> %4=2 function F
+      TCC0->CC[2].reg = int(duty_cycle * (pwm_period-1));
+      //PORT->Group[PORTA].DIRSET.reg = PORT_PA05;      // Set pin as output
+      //PORT->Group[PORTA].OUTCLR.reg = PORT_PA05;      // Set pin to low
+      PORT->Group[PORTA].PINCFG[20].bit.PMUXEN = 1;
+      PORT->Group[PORTA].PMUX[20 >> 1].reg |= PORT_PMUX_PMUXE_F;
+      break;
+
+    case 10:
+      // PA21 TCC0/WO[7] %4 = 3function F
+      TCC0->CC[3].reg = int(duty_cycle * (pwm_period-1));
+      //PORT->Group[PORTA].DIRSET.reg = PORT_PA04;      // Set pin as output
+      //PORT->Group[PORTA].OUTCLR.reg = PORT_PA04;      // Set pin to low
+      PORT->Group[PORTA].PINCFG[21].bit.PMUXEN = 1;
+      PORT->Group[PORTA].PMUX[21 >> 1].reg |= PORT_PMUX_PMUXO_F;
       break;
 
     default:
@@ -121,11 +139,11 @@ void pwmSet(int pinNumber, float duty_cycle){
 }
 void setup() {
   pwmSetup();
-  // by themselves, they all work, if multiple pwmSet are enabled, only the last one works
-  //pwmSet(2,0.1); -> this works
-  //pwmSet(3,0.2);
-  pwmSet(6,0.6); // -> this works
-  pwmSet(5,0.5); // -> this works
+  pwmSet(6,0.6);
+  pwmSet(5,0.5);
+  pwmSet(9,0.1);
+  pwmSet(10,0.2);
+  // TODO docs
 
 }
 
