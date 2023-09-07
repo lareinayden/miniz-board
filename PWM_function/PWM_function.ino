@@ -111,24 +111,6 @@ void pwmSet(int pinNumber, float duty_cycle){
       PORT->Group[PORTA].PMUX[2].reg |= PORT_PMUX_PMUXE_E;
       break;
 
-    case 16:
-      // D11 - this works
-      PORT->Group[PORTA].DIRSET.reg = PORT_PA16;      // Set pin as output
-      PORT->Group[PORTA].OUTCLR.reg = PORT_PA16;      // Set pin to low
-    
-      // Enable the port multiplexer for PA18
-      PORT->Group[PORTA].PINCFG[16].reg |= PORT_PINCFG_PMUXEN;
-    
-      // Odd pin num (2*n + 1): use PMUXO
-      // Even pin num (2*n): use PMUXE
-      PORT->Group[PORTA].PMUX[8].reg = PORT_PMUX_PMUXE_F;
-
-      TCC0->CC[2].reg = int(duty_cycle * (pwm_period-1));
-      while (TCC0->SYNCBUSY.bit.CC2);
-
-      break;
-
-
     default:
       Serial.println("Unsupported pin");
   }
@@ -144,38 +126,6 @@ void setup() {
   //pwmSet(3,0.2);
   pwmSet(6,0.6); // -> this works
   pwmSet(5,0.5); // -> this works
-  //pwmSet(16,0.5); -> this works
-  // The CCBx register value corresponds to the pulsewidth in microseconds (us)
-
-  //TCC0->CC[0].reg = int(0.1 * (pwm_period-1));
-  //PORT->Group[PORTA].PINCFG[4].bit.PMUXEN = 1;
-  //PORT->Group[PORTA].PMUX[4 >> 1].reg |= PORT_PMUX_PMUXE_E;
-
-  //TCC0->CC[1].reg = int(0.2 * (pwm_period-1));
-  //PORT->Group[PORTA].PINCFG[5].bit.PMUXEN = 1;
-  //// D5 - PA05, D6 = PA04
-  //PORT->Group[PORTA].PMUX[5 >> 1].reg |= PORT_PMUX_PMUXO_E;
-
-
-
-  //PORT->Group[PORTA].PINCFG[20].bit.PMUXEN = 1;
-  //PORT->Group[PORTA].PINCFG[21].bit.PMUXEN = 1;
-
-  // D9 - PA20, D10 - PA21
-  //PORT->Group[PORTA].PMUX[21 >> 1].reg |= PORT_PMUX_PMUXO_F;
-  //PORT->Group[PORTA].PMUX[20 >> 1].reg |= PORT_PMUX_PMUXE_F;
-
-  // this works
-  //while(TCC0->SYNCBUSY.bit.CCB0);
-  //while(TCC0->SYNCBUSY.bit.CCB1);
-  //TCC0->CC[2].reg = int(0.6 * (pwm_period-1));
-  //while(TCC0->SYNCBUSY.bit.CCB2);
-  //TCC0->CC[3].reg = int(0.7 * (pwm_period-1));
-  //while(TCC0->SYNCBUSY.bit.CCB3);
-
-  // Enable output (start PWM)
-  //TCC0->CTRLA.reg |= (TCC_CTRLA_ENABLE);
-  //while (TCC0->SYNCBUSY.bit.ENABLE);              // Wait for synchronization
 
 }
 
