@@ -46,10 +46,10 @@ void pwmSetup() {
   TCC0->CTRLA.reg |= TCC_CTRLA_PRESCALER(TCC_CTRLA_PRESCALER_DIV1_Val);
 
   // Use "Normal PWM" (single-slope PWM): count up to PER, match on CC[n]
-  //TCC0->WAVE.reg = TCC_WAVE_WAVEGEN_NPWM;         // Select NPWM as waveform
+  TCC0->WAVE.reg = TCC_WAVE_WAVEGEN_NPWM;         // Select NPWM as waveform
 
-  REG_TCC0_WAVE |= TCC_WAVE_POL(0xF) |         // Reverse the output polarity on all TCC0 outputs
-                  TCC_WAVE_WAVEGEN_DSBOTH;    // Setup dual slope PWM on TCC0
+  //REG_TCC0_WAVE |= TCC_WAVE_POL(0xF) |         // Reverse the output polarity on all TCC0 outputs
+  //                TCC_WAVE_WAVEGEN_DSBOTH;    // Setup dual slope PWM on TCC0
   while (TCC0->SYNCBUSY.bit.WAVE);                // Wait for synchronization
 
   // Set the period (the number to count to (TOP) before resetting timer)
@@ -94,7 +94,6 @@ void pwmSet(int pinNumber, float duty_cycle){
       break;
 
     case 5:
-    // this outputs on D3 (PB11)
       // PA05 TCC0/WO[1] function E
       TCC0->CC[1].reg = int(duty_cycle * (pwm_period-1));
       PORT->Group[PORTA].DIRSET.reg = PORT_PA05;      // Set pin as output
