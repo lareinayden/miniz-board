@@ -151,9 +151,13 @@ void setup() {
 
   PORT->Group[g_APinDescription[9].ulPort].PINCFG[g_APinDescription[9].ulPin].bit.PMUXEN = 1;
   PORT->Group[g_APinDescription[10].ulPort].PINCFG[g_APinDescription[10].ulPin].bit.PMUXEN = 1;
+  PORT->Group[g_APinDescription[5].ulPort].PINCFG[g_APinDescription[5].ulPin].bit.PMUXEN = 1;
+  PORT->Group[g_APinDescription[6].ulPort].PINCFG[g_APinDescription[6].ulPin].bit.PMUXEN = 1;
 
   // D9 - PA20, D10 - PA21
   PORT->Group[g_APinDescription[9].ulPort].PMUX[g_APinDescription[9].ulPin >> 1].reg = PORT_PMUX_PMUXO_F | PORT_PMUX_PMUXE_F;
+  // D5 - PA05, D6 = PA04
+  PORT->Group[g_APinDescription[6].ulPort].PMUX[g_APinDescription[6].ulPin >> 1].reg = PORT_PMUX_PMUXO_E | PORT_PMUX_PMUXE_E;
 
 
   // this works
@@ -162,9 +166,13 @@ void setup() {
   //REG_TCC0_CCB3 = int(0.7*(pwm_period-1));       // TCC0 CCB3  D10
   //while(TCC0->SYNCBUSY.bit.CCB3);
 
-  // does this method work?
+  // this works
+  TCC0->CC[0].reg = int(0.1 * (pwm_period-1));
+  while(TCC0->SYNCBUSY.bit.CCB0);
+  TCC0->CC[1].reg = int(0.2 * (pwm_period-1));
+  while(TCC0->SYNCBUSY.bit.CCB1);
   TCC0->CC[2].reg = int(0.6 * (pwm_period-1));
-  while(TCC0->SYNCBUSY.bit.CCB3);
+  while(TCC0->SYNCBUSY.bit.CCB2);
   TCC0->CC[3].reg = int(0.7 * (pwm_period-1));
   while(TCC0->SYNCBUSY.bit.CCB3);
 
