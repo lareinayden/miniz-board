@@ -28,4 +28,7 @@ Circuit
 #### Author
 Matthrew Kelsey(original), Nick Zhang(current maintainer)
 
+#### Tricks
+Double tapping the reset button on Arduino Nano 33 IoT will force bootloader mode. This is helpful in some cases
+
 
