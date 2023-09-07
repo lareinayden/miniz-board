@@ -1,5 +1,6 @@
 // source https://shawnhymel.com/1710/arduino-zero-samd21-raw-pwm-using-cmsis/
 // also check https://forum.arduino.cc/t/changing-arduino-zero-pwm-frequency/334231/3
+// about CC and WO[n] mapping https://forum.arduino.cc/t/samd21-wo-and-cc-register-mapping/852449/2
 
 // NOTE this is inconsistent with schematic
 // left
@@ -45,10 +46,10 @@ void pwmSetup() {
   TCC0->CTRLA.reg |= TCC_CTRLA_PRESCALER(TCC_CTRLA_PRESCALER_DIV1_Val);
 
   // Use "Normal PWM" (single-slope PWM): count up to PER, match on CC[n]
-  TCC0->WAVE.reg = TCC_WAVE_WAVEGEN_NPWM;         // Select NPWM as waveform
+  //TCC0->WAVE.reg = TCC_WAVE_WAVEGEN_NPWM;         // Select NPWM as waveform
 
-  //REG_TCC0_WAVE |= TCC_WAVE_POL(0xF) |         // Reverse the output polarity on all TCC0 outputs
-  //                TCC_WAVE_WAVEGEN_DSBOTH;    // Setup dual slope PWM on TCC0
+  REG_TCC0_WAVE |= TCC_WAVE_POL(0xF) |         // Reverse the output polarity on all TCC0 outputs
+                  TCC_WAVE_WAVEGEN_DSBOTH;    // Setup dual slope PWM on TCC0
   while (TCC0->SYNCBUSY.bit.WAVE);                // Wait for synchronization
 
   // Set the period (the number to count to (TOP) before resetting timer)
@@ -99,7 +100,7 @@ void pwmSet(int pinNumber, float duty_cycle){
       PORT->Group[PORTA].DIRSET.reg = PORT_PA05;      // Set pin as output
       PORT->Group[PORTA].OUTCLR.reg = PORT_PA05;      // Set pin to low
       PORT->Group[PORTA].PINCFG[5].bit.PMUXEN = 1;
-      PORT->Group[PORTA].PMUX[2].reg = PORT_PMUX_PMUXO_F;
+      PORT->Group[PORTA].PMUX[2].reg = PORT_PMUX_PMUXO_E;
       break;
 
     case 6:
@@ -108,11 +109,11 @@ void pwmSet(int pinNumber, float duty_cycle){
       PORT->Group[PORTA].DIRSET.reg = PORT_PA04;      // Set pin as output
       PORT->Group[PORTA].OUTCLR.reg = PORT_PA04;      // Set pin to low
       PORT->Group[PORTA].PINCFG[4].bit.PMUXEN = 1;
-      PORT->Group[PORTA].PMUX[2].reg = PORT_PMUX_PMUXE_F;
+      PORT->Group[PORTA].PMUX[2].reg = PORT_PMUX_PMUXE_E;
       break;
 
     case 16:
-      // D11
+      // D11 - this works
       PORT->Group[PORTA].DIRSET.reg = PORT_PA16;      // Set pin as output
       PORT->Group[PORTA].OUTCLR.reg = PORT_PA16;      // Set pin to low
     
@@ -139,11 +140,38 @@ void pwmSet(int pinNumber, float duty_cycle){
 }
 void setup() {
   pwmSetup();
-  pwmSet(2,0.1);
-  pwmSet(3,0.2);
-  pwmSet(5,0.3);
-  pwmSet(6,0.4);
-  pwmSet(16,0.5);
+  // by themselves, they all work, if multiple pwmSet are enabled, only the last one works
+  //pwmSet(2,0.1); -> this works
+  //pwmSet(3,0.2);
+  //pwmSet(6,0.6); // -> this works
+  //pwmSet(5,0.5); // -> this works
+  //pwmSet(16,0.5); -> this works
+  // The CCBx register value corresponds to the pulsewidth in microseconds (us)
+
+
+  PORT->Group[g_APinDescription[9].ulPort].PINCFG[g_APinDescription[9].ulPin].bit.PMUXEN = 1;
+  PORT->Group[g_APinDescription[10].ulPort].PINCFG[g_APinDescription[10].ulPin].bit.PMUXEN = 1;
+
+  // D9 - PA20, D10 - PA21
+  PORT->Group[g_APinDescription[9].ulPort].PMUX[g_APinDescription[9].ulPin >> 1].reg = PORT_PMUX_PMUXO_F | PORT_PMUX_PMUXE_F;
+
+
+  // this works
+  //REG_TCC0_CCB2 = int(0.6*(pwm_period-1));       // TCC0 CCB2  D9
+  //while(TCC0->SYNCBUSY.bit.CCB2);
+  //REG_TCC0_CCB3 = int(0.7*(pwm_period-1));       // TCC0 CCB3  D10
+  //while(TCC0->SYNCBUSY.bit.CCB3);
+
+  // does this method work?
+  TCC0->CC[2].reg = int(0.6 * (pwm_period-1));
+  while(TCC0->SYNCBUSY.bit.CCB3);
+  TCC0->CC[3].reg = int(0.7 * (pwm_period-1));
+  while(TCC0->SYNCBUSY.bit.CCB3);
+
+  // Enable output (start PWM)
+  TCC0->CTRLA.reg |= (TCC_CTRLA_ENABLE);
+  while (TCC0->SYNCBUSY.bit.ENABLE);              // Wait for synchronization
+
 }
 
 void loop() {
