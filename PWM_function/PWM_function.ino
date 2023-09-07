@@ -67,7 +67,7 @@ void pwmSet(int pinNumber, float duty_cycle){
     // PIN: g_APinDescription[pinNumber].ulPin
     case 3:
       // PB11 TCC0/WO[5] function F
-      TCC0->CC[5].reg = int(duty_cycle * (pwm_period-1));
+      TCC0->CC[5 % 4].reg = int(duty_cycle * (pwm_period-1));
       PORT->Group[PORTB].DIRSET.reg = PORT_PB11;      // Set pin as output
       PORT->Group[PORTB].OUTCLR.reg = PORT_PB11;      // Set pin to low
       // Enable the port multiplexer for PB11
@@ -85,7 +85,7 @@ void pwmSet(int pinNumber, float duty_cycle){
 
     case 2:
       // PB10 TCC0/WO[4] function F
-      TCC0->CC[4].reg = int(duty_cycle * (pwm_period-1));
+      TCC0->CC[4 % 4].reg = int(duty_cycle * (pwm_period-1));
       PORT->Group[PORTB].DIRSET.reg = PORT_PB10;      // Set pin as output
       PORT->Group[PORTB].OUTCLR.reg = PORT_PB10;      // Set pin to low
       PORT->Group[PORTB].PINCFG[10].bit.PMUXEN = 1;
@@ -93,6 +93,7 @@ void pwmSet(int pinNumber, float duty_cycle){
       break;
 
     case 5:
+    // this outputs on D3 (PB11)
       // PA05 TCC0/WO[1] function E
       TCC0->CC[1].reg = int(duty_cycle * (pwm_period-1));
       PORT->Group[PORTA].DIRSET.reg = PORT_PA05;      // Set pin as output
@@ -118,7 +119,6 @@ void pwmSet(int pinNumber, float duty_cycle){
       // Enable the port multiplexer for PA18
       PORT->Group[PORTA].PINCFG[16].reg |= PORT_PINCFG_PMUXEN;
     
-      // Connect TCC0 timer to PA18. Function F is TCC0/WO[2] for PA18.
       // Odd pin num (2*n + 1): use PMUXO
       // Even pin num (2*n): use PMUXE
       PORT->Group[PORTA].PMUX[8].reg = PORT_PMUX_PMUXE_F;
@@ -139,10 +139,10 @@ void pwmSet(int pinNumber, float duty_cycle){
 }
 void setup() {
   pwmSetup();
-  //pwmSet(2,0.1);
-  //pwmSet(3,0.2);
-  //pwmSet(5,0.3);
-  //pwmSet(6,0.4);
+  pwmSet(2,0.1);
+  pwmSet(3,0.2);
+  pwmSet(5,0.3);
+  pwmSet(6,0.4);
   pwmSet(16,0.5);
 }
 
