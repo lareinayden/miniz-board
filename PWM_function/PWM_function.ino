@@ -1,6 +1,67 @@
-// source https://shawnhymel.com/1710/arduino-zero-samd21-raw-pwm-using-cmsis/
+// Generate 20kHz PWM with SAMD21
+// this file uses SAMD21 chip functions and interacts with low-level registers
+// the documentation on these function is very obscure, but once you
+// understand it it's quite straightforward, some helpful sources:
+// official datasheet https://shawnhymel.com/1710/arduino-zero-samd21-raw-pwm-using-cmsis/
 // also check https://forum.arduino.cc/t/changing-arduino-zero-pwm-frequency/334231/3
 // about CC and WO[n] mapping https://forum.arduino.cc/t/samd21-wo-and-cc-register-mapping/852449/2
+
+// To use the PWM function on SAMD21, 
+// First setup a clock source
+// the 48MHz chip clock is connected to GCLK4 (Generic Clock Controller)
+// which is then connected to TCC0 (Timer/Counter for Control)
+// You can apply clock divider to GCLK, or prescaler to TCC to control the counter frequency
+// Details can be found in relevant code, currently we use 20kHz.
+// There are three TCC, TCC0/1/2. TCC3 is only available in later model SAMD21
+// and not available on arduino nano iot 33 board
+
+// Second we select a PWM mode, we use single slope PWm but can also use dual slope
+// note that dual slope would halve the frequency
+
+// Third we set the PER (TOP) register for TCC0, this is the value that TCC0 
+// counts to before resetting, this can be used to fine tune frequency
+
+// Fourth we configure the individual outputs from TCC0, this is denoted as TCC0/WO[n]
+// where n is a number between 0 to 7
+// TCC0 only has 4 independent channels, WO[0]-WO[3], the remaining channel 4-7 repeats the first 4 channels
+// It's also possible to have channel 4-7 invert the signal of 0-3
+// it is designed this way because on an H bridge, two inputs are always inverted
+// we DON'T invert 4-7, so for us, 0-3 is the same as 4-7
+// we can't set channel 4-7 directly, if we want to output to channel 5
+// we set channel 1. We need to do this because due to the pin layouts, 
+// sometimes the pin we have access to can only be connected to channel 4-7
+
+// Fifth we need to cnnect a pin (e.g. PB11 ) to an PWM output (e.g. TCC0/WO[5])
+// this contains two parts, first enable the port multiplexer for that pin
+// and second connect the pin to a desired function. A pin in multiplexer mode
+// can be connected to different functions (A-G), you can find the table in the 
+// SAMD21 datasheet. TCC functions are usually function E or F
+// One last thing is that the number of registers for function connection
+// is half the number of pins, and one register controls two pins.
+// for example in PORTB, PB21 and PB20 are both controller by PMUX[10]
+// if you wish to connect an odd pin (e.g. PB21 to function 'F'),
+//  use PORT_PMUX_PMUX'O'_'F'
+// if you wish to connect an even pin (e.g. PB20 to function 'E'),
+//  use PORT_PMUX_PMUX'E'_'E'
+
+// here's an example for step 3-5, step 1-2 are in pwmSetup() and are universal
+
+//  // Arduino D3 (Nano IoT) PB11 TCC0/WO[5] function F
+//  TCC0->CC[5 % 4].reg = int(duty_cycle * (pwm_period-1));
+//  // not entirely necessary
+//  PORT->Group[PORTB].DIRSET.reg |= PORT_PB11;      // Set pin as output
+//  PORT->Group[PORTB].OUTCLR.reg |= PORT_PB11;      // Set pin to low
+//  // Enable the port multiplexer for PB11
+//  PORT->Group[PORTB].PINCFG[11].bit.PMUXEN = 1;
+//  // alternative way to do the above
+//  //PORT->Group[PORTB].PINCFG[11].reg |= PORT_PINCFG_PMUXEN;
+
+//  // Connect TCC0 timer to PB11. Function F is TCC0/WO[5] for PB11.
+//  // Odd pin num (pin_no = 2*n + 1): use PMUXO
+//  // Even pin num (pin_no = 2*n): use PMUXE
+//  // PMUX[x]: here x = pin_no / 2
+//  // for more detail check link in top of file
+//  PORT->Group[PORTB].PMUX[11 >> 1].reg |= PORT_PMUX_PMUXO_F;
 
 // NOTE this is inconsistent with schematic
 // left
