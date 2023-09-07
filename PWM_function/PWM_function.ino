@@ -81,34 +81,34 @@ void pwmSet(int pinNumber, float duty_cycle){
       // Even pin num (pin_no = 2*n): use PMUXE
       // PMUX[x]: here x = pin_no / 2
       // for more detail check link in top of file
-      PORT->Group[PORTB].PMUX[5].reg = PORT_PMUX_PMUXO_F;
+      PORT->Group[PORTB].PMUX[5].reg |= PORT_PMUX_PMUXO_F;
       break;
 
     case 2:
       // PB10 TCC0/WO[4] function F
       TCC0->CC[4 % 4].reg = int(duty_cycle * (pwm_period-1));
-      PORT->Group[PORTB].DIRSET.reg = PORT_PB10;      // Set pin as output
-      PORT->Group[PORTB].OUTCLR.reg = PORT_PB10;      // Set pin to low
+      //PORT->Group[PORTB].DIRSET.reg = PORT_PB10;      // Set pin as output
+      //PORT->Group[PORTB].OUTCLR.reg = PORT_PB10;      // Set pin to low
       PORT->Group[PORTB].PINCFG[10].bit.PMUXEN = 1;
-      PORT->Group[PORTB].PMUX[5].reg = PORT_PMUX_PMUXE_F;
+      PORT->Group[PORTB].PMUX[5].reg |= PORT_PMUX_PMUXE_F;
       break;
 
     case 5:
       // PA05 TCC0/WO[1] function E
       TCC0->CC[1].reg = int(duty_cycle * (pwm_period-1));
-      PORT->Group[PORTA].DIRSET.reg = PORT_PA05;      // Set pin as output
-      PORT->Group[PORTA].OUTCLR.reg = PORT_PA05;      // Set pin to low
+      //PORT->Group[PORTA].DIRSET.reg = PORT_PA05;      // Set pin as output
+      //PORT->Group[PORTA].OUTCLR.reg = PORT_PA05;      // Set pin to low
       PORT->Group[PORTA].PINCFG[5].bit.PMUXEN = 1;
-      PORT->Group[PORTA].PMUX[2].reg = PORT_PMUX_PMUXO_E;
+      PORT->Group[PORTA].PMUX[2].reg |= PORT_PMUX_PMUXO_E;
       break;
 
     case 6:
       // PA04 TCC0/WO[0] function E
       TCC0->CC[0].reg = int(duty_cycle * (pwm_period-1));
-      PORT->Group[PORTA].DIRSET.reg = PORT_PA04;      // Set pin as output
-      PORT->Group[PORTA].OUTCLR.reg = PORT_PA04;      // Set pin to low
+      //PORT->Group[PORTA].DIRSET.reg = PORT_PA04;      // Set pin as output
+      //PORT->Group[PORTA].OUTCLR.reg = PORT_PA04;      // Set pin to low
       PORT->Group[PORTA].PINCFG[4].bit.PMUXEN = 1;
-      PORT->Group[PORTA].PMUX[2].reg = PORT_PMUX_PMUXE_E;
+      PORT->Group[PORTA].PMUX[2].reg |= PORT_PMUX_PMUXE_E;
       break;
 
     case 16:
@@ -142,50 +142,40 @@ void setup() {
   // by themselves, they all work, if multiple pwmSet are enabled, only the last one works
   //pwmSet(2,0.1); -> this works
   //pwmSet(3,0.2);
-  //pwmSet(6,0.6); // -> this works
-  //pwmSet(5,0.5); // -> this works
+  pwmSet(6,0.6); // -> this works
+  pwmSet(5,0.5); // -> this works
   //pwmSet(16,0.5); -> this works
   // The CCBx register value corresponds to the pulsewidth in microseconds (us)
 
+  //TCC0->CC[0].reg = int(0.1 * (pwm_period-1));
+  //PORT->Group[PORTA].PINCFG[4].bit.PMUXEN = 1;
+  //PORT->Group[PORTA].PMUX[4 >> 1].reg |= PORT_PMUX_PMUXE_E;
 
-  //PORT->Group[g_APinDescription[9].ulPort].PINCFG[g_APinDescription[9].ulPin].bit.PMUXEN = 1;
-  //PORT->Group[g_APinDescription[10].ulPort].PINCFG[g_APinDescription[10].ulPin].bit.PMUXEN = 1;
-  //PORT->Group[g_APinDescription[5].ulPort].PINCFG[g_APinDescription[5].ulPin].bit.PMUXEN = 1;
-  //PORT->Group[g_APinDescription[6].ulPort].PINCFG[g_APinDescription[6].ulPin].bit.PMUXEN = 1;
-  PORT->Group[PORTA].PINCFG[4].bit.PMUXEN = 1;
-  PORT->Group[PORTA].PINCFG[5].bit.PMUXEN = 1;
-  PORT->Group[PORTA].PINCFG[20].bit.PMUXEN = 1;
-  PORT->Group[PORTA].PINCFG[21].bit.PMUXEN = 1;
+  //TCC0->CC[1].reg = int(0.2 * (pwm_period-1));
+  //PORT->Group[PORTA].PINCFG[5].bit.PMUXEN = 1;
+  //// D5 - PA05, D6 = PA04
+  //PORT->Group[PORTA].PMUX[5 >> 1].reg |= PORT_PMUX_PMUXO_E;
+
+
+
+  //PORT->Group[PORTA].PINCFG[20].bit.PMUXEN = 1;
+  //PORT->Group[PORTA].PINCFG[21].bit.PMUXEN = 1;
 
   // D9 - PA20, D10 - PA21
-  //PORT->Group[g_APinDescription[9].ulPort].PMUX[g_APinDescription[9].ulPin >> 1].reg = PORT_PMUX_PMUXO_F | PORT_PMUX_PMUXE_F;
-  // D5 - PA05, D6 = PA04
-  //PORT->Group[g_APinDescription[6].ulPort].PMUX[g_APinDescription[6].ulPin >> 1].reg = PORT_PMUX_PMUXO_E | PORT_PMUX_PMUXE_E;
-  PORT->Group[PORTA].PMUX[5 >> 1].reg |= PORT_PMUX_PMUXO_E;
-  PORT->Group[PORTA].PMUX[4 >> 1].reg |= PORT_PMUX_PMUXE_E;
-  PORT->Group[PORTA].PMUX[21 >> 1].reg |= PORT_PMUX_PMUXO_F;
-  PORT->Group[PORTA].PMUX[20 >> 1].reg |= PORT_PMUX_PMUXE_F;
-
+  //PORT->Group[PORTA].PMUX[21 >> 1].reg |= PORT_PMUX_PMUXO_F;
+  //PORT->Group[PORTA].PMUX[20 >> 1].reg |= PORT_PMUX_PMUXE_F;
 
   // this works
-  //REG_TCC0_CCB2 = int(0.6*(pwm_period-1));       // TCC0 CCB2  D9
+  //while(TCC0->SYNCBUSY.bit.CCB0);
+  //while(TCC0->SYNCBUSY.bit.CCB1);
+  //TCC0->CC[2].reg = int(0.6 * (pwm_period-1));
   //while(TCC0->SYNCBUSY.bit.CCB2);
-  //REG_TCC0_CCB3 = int(0.7*(pwm_period-1));       // TCC0 CCB3  D10
+  //TCC0->CC[3].reg = int(0.7 * (pwm_period-1));
   //while(TCC0->SYNCBUSY.bit.CCB3);
 
-  // this works
-  TCC0->CC[0].reg = int(0.1 * (pwm_period-1));
-  while(TCC0->SYNCBUSY.bit.CCB0);
-  TCC0->CC[1].reg = int(0.2 * (pwm_period-1));
-  while(TCC0->SYNCBUSY.bit.CCB1);
-  TCC0->CC[2].reg = int(0.6 * (pwm_period-1));
-  while(TCC0->SYNCBUSY.bit.CCB2);
-  TCC0->CC[3].reg = int(0.7 * (pwm_period-1));
-  while(TCC0->SYNCBUSY.bit.CCB3);
-
   // Enable output (start PWM)
-  TCC0->CTRLA.reg |= (TCC_CTRLA_ENABLE);
-  while (TCC0->SYNCBUSY.bit.ENABLE);              // Wait for synchronization
+  //TCC0->CTRLA.reg |= (TCC_CTRLA_ENABLE);
+  //while (TCC0->SYNCBUSY.bit.ENABLE);              // Wait for synchronization
 
 }
 
