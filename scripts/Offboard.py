@@ -12,9 +12,6 @@ from threading import Thread,Event,Lock
 import select
 import queue
 
-# NOTE ideas to try for performance
-# different sockets for incoming/outgoing messages
-
 class OffboardPacket(PrintObject):
     out_seq_no = 0
     packet_size = 64

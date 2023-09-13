@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 class SinSteeringTest(PrintObject):
     def __init__(self,T):
-        self.car = Offboard("192.168.0.11",2390)
+        self.car = Offboard("192.168.10.12",2390)
         self.T = T
         return
 
@@ -22,7 +22,7 @@ class SinSteeringTest(PrintObject):
                 self.car.ready.clear()
                 self.car.throttle = throttle
                 self.car.steering = sin(2*pi/self.T*time()) * radians(26.1)
-                #self.print_info('command:',self.car.throttle,self.car.steering)
+                self.print_info('command:',self.car.throttle,self.car.steering)
 
             self.old_t_vec = self.car.log_t_vec
             self.old_steering_requested_vec = self.car.steering_requested_vec
@@ -39,7 +39,7 @@ class SinSteeringTest(PrintObject):
                 self.car.ready.clear()
                 self.car.throttle = throttle
                 self.car.steering = sin(2*pi/self.T*time()) * radians(26.1)
-                #self.print_info('command:',self.car.throttle,self.car.steering)
+                self.print_info('command:',self.car.throttle,self.car.steering)
 
             self.new_t_vec = self.car.log_t_vec
             self.new_steering_requested_vec = self.car.steering_requested_vec

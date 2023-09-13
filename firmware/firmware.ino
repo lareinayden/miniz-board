@@ -173,6 +173,15 @@ void actuateControls() {
 }
 
 void PIDControl() {
+  if (flag_failsafe) {
+    // brake mode for all
+    // NOTE digitalWrite no longer works
+    analogWrite(drive_fwd_pin, 0);
+    analogWrite(drive_rev_pin, 0);
+    analogWrite(steer_fwd_pin, 255);
+    analogWrite(steer_rev_pin, 255);
+    return;
+  }
   // Steering PID control
   float raw_encoder = analogRead(encoder_s_pin);
   steering_measured =
