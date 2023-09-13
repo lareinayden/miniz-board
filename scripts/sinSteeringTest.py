@@ -13,8 +13,8 @@ class SinSteeringTest(PrintObject):
 
     def main(self):
         try:
-            throttle = 0.0
-            dt = 1.5
+            throttle = 0.5
+            dt = 1500
             '''
             self.car.setParam(400.0,0,10)
             t0 = time()
@@ -33,7 +33,7 @@ class SinSteeringTest(PrintObject):
             self.car.steering_measured_vec = []
             '''
 
-            self.car.setParam(400.0,0,40)
+            self.car.setParam(400.0/255.0,0,40/255.0)
             t0 = time()
 
             while time() < t0 + dt:
@@ -53,15 +53,16 @@ class SinSteeringTest(PrintObject):
             self.car.quit()
 
     def final(self):
-        fig, ax = plt.subplots(2,1)
+        #fig, ax = plt.subplots(2,1)
         #ax[0].plot(np.array(self.old_t_vec) - self.old_t_vec[0], self.old_steering_requested_vec)
         #ax[0].plot(np.array(self.old_t_vec) - self.old_t_vec[0], self.old_steering_measured_vec)
-        ax[1].plot(np.array(self.new_t_vec) - self.new_t_vec[0], self.new_steering_requested_vec)
-        ax[1].plot(np.array(self.new_t_vec) - self.new_t_vec[0], self.new_steering_measured_vec)
-        plt.show()
+        #ax[1].plot(np.array(self.new_t_vec) - self.new_t_vec[0], self.new_steering_requested_vec)
+        #ax[1].plot(np.array(self.new_t_vec) - self.new_t_vec[0], self.new_steering_measured_vec)
+        #plt.show()
+        pass
 
 if __name__ == '__main__':
-    T = 0.7
+    T = 0.3
     main = SinSteeringTest(T) 
     main.main()
     main.final()

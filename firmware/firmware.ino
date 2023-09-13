@@ -7,6 +7,7 @@
 #include "isr_timer.h"
 #include "network.h"
 #include "packet.h"
+#include "pwm.h"
 #include "status_light.h"
 
 unsigned int localPort = 2390;
@@ -17,9 +18,9 @@ int encoder_s_pin = 14;
 
 // NOTE this is inconsistent with schematic
 // left
-int steer_rev_pin = 2; // originally 2 -> changed to 9
+int steer_rev_pin = 9; // originally 2 -> changed to 9
 // right
-int steer_fwd_pin = 3; // originally 3 -> changed to 10
+int steer_fwd_pin = 10; // originally 3 -> changed to 10
 
 int old_steer_rev_pin = 2;
 int old_steer_fwd_pin = 3;
@@ -63,6 +64,7 @@ void setup() {
   setupWifi();
   Udp.begin(localPort);
   timerSetup();
+  PWM::setup();
 }
 
 void blinkTwice() {
@@ -124,6 +126,8 @@ void loop() {
     flag_failsafe = false;
     led.on();
     // response is handled by packet parser
+    // Serial.print("throttle");
+    Serial.println(throttle);
   }
 
   if (millis() - last_packet_ts > 100 && !flag_failsafe) {
@@ -134,8 +138,6 @@ void loop() {
     // Serial.println(" failsafe");
     led.blink();
   }
-
-  actuateThrottle();
 }
 
 float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
@@ -145,21 +147,14 @@ float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
 // using global variable throttle and steering
 // set pwm for servo and throttle
 void actuateThrottle() {
-  if (flag_failsafe) {
-    // brake mode for all
-    // NOTE digitalWrite no longer works
-    analogWrite(drive_fwd_pin, 0);
-    analogWrite(drive_rev_pin, 0);
-    analogWrite(steer_fwd_pin, 255);
-    analogWrite(steer_rev_pin, 255);
-    return;
-  }
-
   // throttle control
   if (abs(throttle) < throttle_deadzone) {
-    analogWrite(drive_fwd_pin, 0);
-    analogWrite(drive_rev_pin, 0);
+    // analogWrite(drive_fwd_pin, 0);
+    // analogWrite(drive_rev_pin, 0);
+    PWM::set(drive_fwd_pin, 0.0);
+    PWM::set(drive_rev_pin, 0.0);
   } else {
+    /*
     int throttle_value = (int)fmap(throttle, -1.0, 1.0, -255.0, 255.0);
     throttle_value = constrain(throttle_value, -255, 255);
     if (throttle_value > 0) {
@@ -168,6 +163,14 @@ void actuateThrottle() {
     } else {
       analogWrite(drive_rev_pin, -throttle_value);
       analogWrite(drive_fwd_pin, 0);
+    }
+    */
+    if (throttle > 0) {
+      PWM::set(drive_fwd_pin, throttle);
+      PWM::set(drive_rev_pin, 0);
+    } else {
+      PWM::set(drive_rev_pin, -throttle);
+      PWM::set(drive_fwd_pin, 0);
     }
   }
 }
@@ -181,12 +184,19 @@ void PIDControl() {
   if (flag_failsafe) {
     // brake mode for all
     // NOTE digitalWrite no longer works
-    analogWrite(drive_fwd_pin, 0);
-    analogWrite(drive_rev_pin, 0);
-    analogWrite(steer_fwd_pin, 255);
-    analogWrite(steer_rev_pin, 255);
+    // analogWrite(drive_fwd_pin, 0);
+    // analogWrite(drive_rev_pin, 0);
+    // analogWrite(steer_fwd_pin, 255);
+    // analogWrite(steer_rev_pin, 255);
+    PWM::set(drive_fwd_pin, 0);
+    PWM::set(drive_rev_pin, 0);
+    PWM::set(steer_fwd_pin, 255);
+    PWM::set(steer_rev_pin, 255);
     return;
   }
+
+  actuateThrottle();
+  return;
   // Steering PID control
   float raw_encoder = analogRead(encoder_s_pin);
   steering_measured =
@@ -197,15 +207,14 @@ void PIDControl() {
 
   float err = steering - steering_measured;
   steering_requested = steering;
-  /*
+
   Serial.print("raw: ");
   Serial.print(raw_encoder);
   Serial.print(" goal: ");
-  Serial.print(steering/PI*180.0,5);
+  Serial.print(steering / PI * 180.0, 5);
   Serial.print(" actual: ");
-  Serial.print(steering_measured/PI*180.0,5);
+  Serial.print(steering_measured / PI * 180.0, 5);
   Serial.println();
-  */
   // filter
 
   float freq = 10.0;
@@ -219,14 +228,20 @@ void PIDControl() {
                  (err - last_err) / dt * param_steering_D;
 
   if (abs(err) < steering_deadzone_rad) {
-    analogWrite(steer_fwd_pin, 0);
-    analogWrite(steer_rev_pin, 0);
+    // analogWrite(steer_fwd_pin, 0);
+    // analogWrite(steer_rev_pin, 0);
+    PWM::set(steer_fwd_pin, 0);
+    PWM::set(steer_rev_pin, 0);
   } else if (output > 0) {
-    analogWrite(steer_rev_pin, constrain(err * param_steering_P, 0, 255));
-    analogWrite(steer_fwd_pin, 0);
+    // analogWrite(steer_rev_pin, constrain(err * param_steering_P, 0, 255));
+    // analogWrite(steer_fwd_pin, 0);
+    PWM::set(steer_rev_pin, output);
+    PWM::set(steer_fwd_pin, 0);
   } else if (output < 0) {
-    analogWrite(steer_fwd_pin, constrain(-err * param_steering_P, 0, 255));
-    analogWrite(steer_rev_pin, 0);
+    // analogWrite(steer_fwd_pin, constrain(-err * param_steering_P, 0, 255));
+    // analogWrite(steer_rev_pin, 0);
+    PWM::set(steer_fwd_pin, output);
+    PWM::set(steer_rev_pin, 0);
   }
 
   last_err = err;
