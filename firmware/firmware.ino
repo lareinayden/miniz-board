@@ -39,7 +39,7 @@ float full_right_angle_rad = -26.1 / 180.0 * PI;
 float full_left_encoder_value = 630.0;
 float full_right_encoder_value = 410.0;
 float steering_deadzone_rad = 1.0 / 180.0 * PI;
-unsigned long last_pid_ts = 0;
+volatile unsigned long last_pid_ts = 0;
 float last_err = 0.0;
 float steering_integral = 0.0;
 float steering_integral_limit = 1.0;
@@ -135,7 +135,7 @@ void loop() {
     led.blink();
   }
 
-  actuateControls();
+  actuateThrottle();
 }
 
 float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
@@ -144,7 +144,7 @@ float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
 
 // using global variable throttle and steering
 // set pwm for servo and throttle
-void actuateControls() {
+void actuateThrottle() {
   if (flag_failsafe) {
     // brake mode for all
     // NOTE digitalWrite no longer works
@@ -172,7 +172,12 @@ void actuateControls() {
   }
 }
 
+// for steering rack
 void PIDControl() {
+  // float dt = (float)(millis() - last_packet_ts) / 1000.0;
+  float dt = (float)(micros() - last_pid_ts) / 1e6;
+  last_pid_ts = micros();
+
   if (flag_failsafe) {
     // brake mode for all
     // NOTE digitalWrite no longer works
@@ -202,7 +207,7 @@ void PIDControl() {
   Serial.println();
   */
   // filter
-  float dt = (float)(millis() - last_packet_ts) / 1000.0;
+
   float freq = 10.0;
   float alfa = (2 * PI * dt * freq) / (2 * PI * dt * freq + 1.0);
   err = (1.0 - alfa) * last_err + alfa * err;
@@ -224,6 +229,5 @@ void PIDControl() {
     analogWrite(steer_rev_pin, 0);
   }
 
-  last_pid_ts = millis();
   last_err = err;
 }

@@ -87,7 +87,7 @@ class OffboardPacket(PrintObject):
 class Offboard(PrintObject):
     available_local_port = 58998
     def __init__(self,car_ip=None,car_port=2390):
-        self.print_debug_enable()
+        #self.print_debug_enable()
         self.car_ip = car_ip
         self.car_port = car_port
         self.initSocket()
