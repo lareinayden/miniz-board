@@ -1,5 +1,7 @@
 #include "pwm.h"
 #include <Arduino.h>
+// TODO: generate PWM pattern used for driving motor
+// e.g. one stays low, other pwm, etc. provide easy API
 
 // NOTE this is inconsistent with schematic
 // left
