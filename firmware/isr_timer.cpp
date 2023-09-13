@@ -24,5 +24,5 @@ void timerSetup() {
 
   // You can use up to 16 timer for each ISR_Timer
   // unit is milliseconds
-  ISR_Timer.setInterval(20L, PIDControl);
+  ISR_Timer.setInterval(2L, PIDControl);
 }
