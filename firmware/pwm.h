@@ -75,7 +75,8 @@
 // valid pin: 5,6,9,10
 class PWM {
 private:
-  const static uint32_t pwm_period = 2400 - 1;
+  // const static uint32_t pwm_period = 2400 - 1;
+  const static uint32_t pwm_period = 24000 - 1;
 
 public:
   static void setup() {

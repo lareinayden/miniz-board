@@ -132,7 +132,7 @@ class Offboard(PrintObject):
 
     # one-time process
     def setup(self):
-        self.setParam(400.0/255.0,0,40/255.0)
+        self.setParam(1.5,0,0.05)
 
     def __commThreadFunction( self, arg ):
         self.print_debug('commThread started')

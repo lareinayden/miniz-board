@@ -100,6 +100,8 @@ void setupWifi() {
   printWifiData();
 }
 
+unsigned long periodic_print_1hz_ts = 0;
+
 void loop() {
   led.update();
   //  Serial.println(millis() - loop_time);
@@ -118,7 +120,8 @@ void loop() {
     IPAddress remoteIp = Udp.remoteIP();
     int len = Udp.read(in_buffer, PACKET_SIZE);
     if (len != PACKET_SIZE) {
-      Serial.println("err reading packet size");
+      Serial.print("err reading packet size ");
+      Serial.println(len);
     }
     // Serial.println("parsing packet");
     parsePacket();
@@ -137,6 +140,16 @@ void loop() {
     // Serial.print(millis());
     // Serial.println(" failsafe");
     led.blink();
+  }
+
+  if (millis() - periodic_print_1hz_ts > 1000) {
+    Serial.print("P: ");
+    Serial.print(param_steering_P);
+    Serial.print(" I: ");
+    Serial.print(param_steering_I);
+    Serial.print(" D: ");
+    Serial.println(param_steering_D);
+    periodic_print_1hz_ts = millis();
   }
 }
 
@@ -190,13 +203,12 @@ void PIDControl() {
     // analogWrite(steer_rev_pin, 255);
     PWM::set(drive_fwd_pin, 0);
     PWM::set(drive_rev_pin, 0);
-    PWM::set(steer_fwd_pin, 255);
-    PWM::set(steer_rev_pin, 255);
+    PWM::set(steer_fwd_pin, 0);
+    PWM::set(steer_rev_pin, 0);
     return;
   }
 
   actuateThrottle();
-  return;
   // Steering PID control
   float raw_encoder = analogRead(encoder_s_pin);
   steering_measured =
@@ -205,16 +217,10 @@ void PIDControl() {
   steering_measured =
       constrain(steering_measured, full_right_angle_rad, full_left_angle_rad);
 
+  // error in radians
   float err = steering - steering_measured;
   steering_requested = steering;
 
-  Serial.print("raw: ");
-  Serial.print(raw_encoder);
-  Serial.print(" goal: ");
-  Serial.print(steering / PI * 180.0, 5);
-  Serial.print(" actual: ");
-  Serial.print(steering_measured / PI * 180.0, 5);
-  Serial.println();
   // filter
 
   float freq = 10.0;
@@ -226,6 +232,18 @@ void PIDControl() {
   // PID
   float output = err * param_steering_P + steering_integral * param_steering_I +
                  (err - last_err) / dt * param_steering_D;
+
+  /*
+  Serial.print("err: ");
+  Serial.print(err);
+  Serial.print(" goal: ");
+  Serial.print(steering / PI * 180.0, 5);
+  Serial.print(" actual: ");
+  Serial.print(steering_measured / PI * 180.0, 5);
+  Serial.print("output: ");
+  Serial.print(output);
+  Serial.println();
+  */
 
   if (abs(err) < steering_deadzone_rad) {
     // analogWrite(steer_fwd_pin, 0);
@@ -240,7 +258,7 @@ void PIDControl() {
   } else if (output < 0) {
     // analogWrite(steer_fwd_pin, constrain(-err * param_steering_P, 0, 255));
     // analogWrite(steer_rev_pin, 0);
-    PWM::set(steer_fwd_pin, output);
+    PWM::set(steer_fwd_pin, -output);
     PWM::set(steer_rev_pin, 0);
   }
 

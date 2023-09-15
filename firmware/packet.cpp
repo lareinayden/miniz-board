@@ -8,9 +8,9 @@ float steering_measured;
 uint32_t current_seq_no = 0;
 // params
 bool param_sensor_update = true;
-float param_steering_P = 100.0 / 255.0;
+float param_steering_P = 1.5;
 float param_steering_I = 0.0;
-float param_steering_D = 0.0;
+float param_steering_D = 0.05;
 
 // parse packet in in_buffer
 // set appropriate global variables
