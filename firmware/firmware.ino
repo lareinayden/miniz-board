@@ -129,8 +129,6 @@ void loop() {
     flag_failsafe = false;
     led.on();
     // response is handled by packet parser
-    // Serial.print("throttle");
-    Serial.println(throttle);
   }
 
   if (millis() - last_packet_ts > 100 && !flag_failsafe) {
@@ -140,16 +138,6 @@ void loop() {
     // Serial.print(millis());
     // Serial.println(" failsafe");
     led.blink();
-  }
-
-  if (millis() - periodic_print_1hz_ts > 1000) {
-    Serial.print("P: ");
-    Serial.print(param_steering_P);
-    Serial.print(" I: ");
-    Serial.print(param_steering_I);
-    Serial.print(" D: ");
-    Serial.println(param_steering_D);
-    periodic_print_1hz_ts = millis();
   }
 }
 
