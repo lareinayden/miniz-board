@@ -50,6 +50,17 @@ StatusLed led;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
+#ifdef _SAMD21_ADC_COMPONENT_
+  ADC->CTRLB.bit.PRESCALER = ADC_CTRLB_PRESCALER_DIV16_Val;
+  while (ADC->STATUS.bit.SYNCBUSY == 1);
+  // Averaging (see datasheet table in AVGCTRL register description)
+  /*
+  ADC->AVGCTRL.reg = ADC_AVGCTRL_SAMPLENUM_8 |    	// # of samples to accumulate. (1/2/4/8.../1024)
+  ADC_AVGCTRL_ADJRES(3);   				// lookup datasheet table 33-3
+  while (ADC->STATUS.bit.SYNCBUSY == 1);
+  */
+
+#endif
   Serial.begin(115200);
   pinMode(encoder_s_pin, INPUT);
   // to be compatible with old board where pin 2,3 are connected to output
@@ -114,10 +125,8 @@ void loop() {
       Serial.println("err packet size");
     }
 
-    // Serial.print("Received packet of size ");
-    // Serial.println(packetSize);
     // Serial.print("From ");
-    IPAddress remoteIp = Udp.remoteIP();
+    //IPAddress remoteIp = Udp.remoteIP();
     int len = Udp.read(in_buffer, PACKET_SIZE);
     if (len != PACKET_SIZE) {
       Serial.print("err reading packet size ");
@@ -231,6 +240,8 @@ void PIDControl() {
   Serial.print("output: ");
   Serial.print(output);
   Serial.println();
+  Serial.print("PID");
+  Serial.println(micros()-last_pid_ts);
   */
 
   if (abs(err) < steering_deadzone_rad) {
@@ -251,4 +262,5 @@ void PIDControl() {
   }
 
   last_err = err;
+  //Serial.println(micros()-last_pid_ts);
 }

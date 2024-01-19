@@ -29,6 +29,10 @@ Circuit
 Matthrew Kelsey(original), Nick Zhang(current maintainer)
 
 #### Tricks
-Double tapping the reset button on Arduino Nano 33 IoT will force bootloader mode. This is helpful in some cases
+  Because we use timer, sometimes our code interfere with booloader, and cause problem when uploading. If problem occurs, like If you get error 'no device found on /dev/ttyACM0',:
+
+ * Double tap the reset button on Arduino Nano 33 IoT to force bootloader mode. 
+ * Close the serial monitor
+ * If upload fails, copy the command to upload, and run it in a terminal.
 
 

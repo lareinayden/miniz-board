@@ -16,7 +16,7 @@ class OffboardPacket(PrintObject):
     out_seq_no = 0
     packet_size = 64
     def __init__(self):
-        #self.print_debug_enable()
+        self.print_debug_enable()
         # actual whole packet
         self.seq_no = None
         self.type = None
@@ -87,7 +87,7 @@ class OffboardPacket(PrintObject):
 class Offboard(PrintObject):
     available_local_port = 58998
     def __init__(self,car_ip=None,car_port=2390):
-        #self.print_debug_enable()
+        self.print_debug_enable()
         self.car_ip = car_ip
         self.car_port = car_port
         self.initSocket()
@@ -95,7 +95,6 @@ class Offboard(PrintObject):
 
         self.ts = 0
         self.dt_vec = []
-
 
         # threading
         self.child_threads = []
@@ -132,7 +131,8 @@ class Offboard(PrintObject):
 
     # one-time process
     def setup(self):
-        self.setParam(1.5,0,0.05)
+        #self.setParam(1.5,0,0.05)
+        pass
 
     def __commThreadFunction( self, arg ):
         self.print_debug('commThread started')
@@ -208,11 +208,13 @@ class Offboard(PrintObject):
     def sendPacket(self,packet):
         sent_size = self.sock.sendto(packet.packet, (self.car_ip, self.car_port))
         self.last_sent_ts = packet.ts
+        self.print_info(f'sent {sent_size} to Arduino')
 
     def parseResponse(self,data):
         packet = OffboardPacket()
         packet.packet = data
         packet_type = packet.parsePacket()
+        self.print_info(f'packet_type = {packet_type}')
         self.last_response_ts = int(clock_gettime_ns(CLOCK_REALTIME) / 1000) % 4294967295
 
         # sensor update

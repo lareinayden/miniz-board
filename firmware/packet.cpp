@@ -72,7 +72,7 @@ void parseCommandPacket() {
   throttle = p->throttle;
 
   buildSensorResponsePacket();
-  sendResponsePacket();
+  int sent_size = sendResponsePacket();
 }
 
 void parseParamPacket() {
@@ -117,7 +117,7 @@ void buildHeader(uint8_t type, uint8_t subtype) {
 
 int sendResponsePacket() {
   Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-  Udp.write(out_buffer, PACKET_SIZE);
+  int size = Udp.write(out_buffer, PACKET_SIZE);
   /*
   if (retval){
     Serial.println("sent success");
@@ -125,5 +125,6 @@ int sendResponsePacket() {
     Serial.println("sent FAIL");
   }
   */
-  return Udp.endPacket();
+  Udp.endPacket();
+  return size;
 }
