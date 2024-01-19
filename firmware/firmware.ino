@@ -51,7 +51,7 @@ StatusLed led;
 // the setup function runs once when you press reset or power the board
 void setup() {
 #ifdef _SAMD21_ADC_COMPONENT_
-  ADC->CTRLB.bit.PRESCALER = ADC_CTRLB_PRESCALER_DIV16_Val;
+  ADC->CTRLB.bit.PRESCALER = ADC_CTRLB_PRESCALER_DIV32_Val;
   while (ADC->STATUS.bit.SYNCBUSY == 1);
   // Averaging (see datasheet table in AVGCTRL register description)
   /*
@@ -74,7 +74,7 @@ void setup() {
   led.off();
   setupWifi();
   Udp.begin(localPort);
-  timerSetup();
+  //timerSetup();
   PWM::setup();
 }
 
@@ -148,6 +148,7 @@ void loop() {
     // Serial.println(" failsafe");
     led.blink();
   }
+  PIDControl();
 }
 
 float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
