@@ -7,14 +7,14 @@ import matplotlib.pyplot as plt
 
 class SinSteeringTest(PrintObject):
     def __init__(self,T):
-        self.car = Offboard("192.168.10.11",2390)
+        self.car = Offboard("192.168.10.12",28840)
         sleep(0.1)
         self.T = T
         return
 
     def main(self):
         try:
-            throttle = 0.0
+            throttle = 0.5
             dt = 1.5
             self.car.setParam(1.5,0,0.05) 
             sleep(0.1)

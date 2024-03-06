@@ -6,21 +6,27 @@ from time import time,sleep
 
 class JoystickDemo(PrintObject):
     def __init__(self):
-        self.car = Offboard("192.168.0.11",2390)
+        print("INIT...")
+        self.joystick = Joystick()
+        self.car = Offboard("192.168.10.12",28840)
+        print("DID INIT")
         return
 
     def main(self):
-        joystick = Joystick()
+        print("JS")
+        print("DID JS")
         try:
             while True:
+                print("DEMO TICK")
+                self.joystick.updateOnce()
                 self.car.ready.wait()
                 self.car.ready.clear()
-                self.car.throttle = joystick.throttle
-                self.car.steering = joystick.steering * radians(26.1)
-                self.print_info('command:',self.car.throttle,self.car.steering)
+                self.car.throttle = self.joystick.throttle * 3
+                self.car.steering = self.joystick.steering * radians(26.1)
+                print('command:',self.car.throttle,self.car.steering)
         except KeyboardInterrupt:
             self.print_info("waiting to quit")
-            joystick.quit()
+            self.joystick.quit()
             self.car.quit()
         self.car.final()
 

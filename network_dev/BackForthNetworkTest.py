@@ -7,7 +7,7 @@ import numpy as np
 
 class NetworkTest(PrintObject):
     def __init__(self):
-        self.car = Offboard("192.168.10.102",2390)
+        self.car = Offboard("192.168.10.102",28840)
         return
 
     def main(self):

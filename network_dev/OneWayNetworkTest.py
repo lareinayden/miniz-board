@@ -91,7 +91,7 @@ class OffboardPacket(PrintObject):
 
 class OneWayNetworkTest(PrintObject):
     available_local_port = 58998
-    def __init__(self,car_ip=None,car_port=2390):
+    def __init__(self,car_ip=None,car_port=28840):
         self.print_debug_enable()
         self.car_ip = car_ip
         self.car_port = car_port
@@ -163,7 +163,7 @@ class OneWayNetworkTest(PrintObject):
         
 
 if __name__=="__main__":
-    main = OneWayNetworkTest("192.168.10.100",2390)
+    main = OneWayNetworkTest("192.168.10.100",28840)
     freq = 100
     for i in range(100):
         main.throttle = i/100

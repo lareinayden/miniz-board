@@ -9,7 +9,7 @@
 
 // TODO use SAMD timer interrupt to achieve higher control frequency
 
-unsigned int localPort = 2390;
+unsigned int localPort = 28840;
 unsigned long last_packet_ts = 0;
 
 // board pin layout

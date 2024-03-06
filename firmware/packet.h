@@ -26,9 +26,15 @@ typedef struct {
   uint8_t src_addr;
   uint8_t type;
   uint8_t sub_type;
+  
+  uint16_t front_lidar;
+  uint16_t back_lidar;
+  uint16_t left_lidar;
+  uint16_t right_lidar;
+  
   union {
     // general
-    char payload[52];
+    char payload[44];
     // type 1.x, command packet
     struct {
       float throttle; // [-1,1]
@@ -47,8 +53,12 @@ typedef struct {
       float steering_D;
     };
   };
+  
 } Packet;
 
+void fastNetworkStep();
+bool parsePacketIfUnique();
+void initPacket();
 
 // parse packet in in_buffer
 // set appropriate global variables

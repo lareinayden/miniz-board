@@ -1,6 +1,7 @@
 #include "isr_timer.h"
 #include "SAMDTimerInterrupt.h"
 #include "SAMD_ISR_Timer.h"
+#include "range_finder_block.hpp"
 #include "firmware.h"
 
 // Depending on the board, you can select SAMD21 Hardware Timer from TC3, TC4,
@@ -24,5 +25,6 @@ void timerSetup() {
 
   // You can use up to 16 timer for each ISR_Timer
   // unit is milliseconds
-  ISR_Timer.setInterval(5L, PIDControl);
+  //ISR_Timer.setInterval(5L, PIDControl);
+  ISR_Timer.setInterval(30L, run_range_finder_timer);
 }

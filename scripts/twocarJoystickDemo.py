@@ -6,8 +6,8 @@ from time import time,sleep
 
 class TwocarJoystickDemo(PrintObject):
     def __init__(self):
-        self.car1 = Offboard("192.168.0.11",2390)
-        self.car2 = Offboard("192.168.0.12",2390)
+        self.car1 = Offboard("192.168.0.11",28840)
+        self.car2 = Offboard("192.168.0.12",28840)
         return
 
     def main(self):

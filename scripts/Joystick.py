@@ -14,6 +14,7 @@ class Joystick:
         self.used_channels = ['ABS_X','ABS_Z','ABS_RZ']
         print_info("please move all joystick to initialize")
         while not (all([x in self.gamepad for x in self.used_channels])) and not self.exit_signal.isSet():
+            print("update")
             self.update()
         print_ok("Success")
 
@@ -22,6 +23,9 @@ class Joystick:
         thread.daemon = True
         self.child_threads.append(thread)
         self.child_threads[-1].start()
+
+        self.steering = 0
+        self.throttle = 0
 
     def quit(self):
         self.exit_signal.set()
@@ -42,6 +46,13 @@ class Joystick:
             self.steering = -np.clip(float(self.gamepad['ABS_X']) / 32767.0, -1, 1)
             # full reverse/brake: -1, full throttle:1
             self.throttle = np.clip(float(self.gamepad['ABS_RZ']) / 1024.0 - float(self.gamepad['ABS_Z']) / 1024.0, -1, 1)
+
+    def updateOnce(self,):
+        self.update()
+        # lef:1, right:-1
+        self.steering = -np.clip(float(self.gamepad['ABS_X']) / 32767.0, -1, 1)
+        # full reverse/brake: -1, full throttle:1
+        self.throttle = np.clip(float(self.gamepad['ABS_RZ']) / 1024.0 - float(self.gamepad['ABS_Z']) / 1024.0, -1, 1)
 
 if __name__ == '__main__':
     joy = Joystick()
