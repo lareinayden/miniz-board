@@ -73,6 +73,7 @@ public:
     Serial.println("StartMeasurement... ");
     //lox->startMeasurement();
 
+    lox->configSensor(Adafruit_VL53L0X::VL53L0X_SENSE_LONG_RANGE);
     lox->startRangeContinuous(10);
 
     ReleaseMux();
