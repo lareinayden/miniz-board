@@ -4,29 +4,35 @@
 
 static TCA9548A I2CMux;
 
-static byte XSHUT=4;
+static byte XSHUT=2;
 
-static RangeFinder frontSensor(1, &I2CMux);
 static RangeFinder rightSensor(0, &I2CMux);
+static RangeFinder frontSensor(1, &I2CMux);
 static RangeFinder leftSensor(2, &I2CMux);
 static RangeFinder backSensor(3, &I2CMux);
 
 void setup_range_finders() {
     Serial.begin(9600);
     pinMode(XSHUT, OUTPUT);
+    digitalWrite(XSHUT, HIGH);
 
+    Serial.println("Set XShut to High");
+
+    delay(500);
     
     Serial.println("Adafruit VL53L0X XShut set Low to Force HW Reset");
     digitalWrite(XSHUT, LOW);
-    delay(500);
+    delay(3000);
     digitalWrite(XSHUT, HIGH);
     Serial.println("Adafruit VL53L0X XShut set high to Allow Boot");
+
+    delay(500);
     
     I2CMux.begin(Wire);
     I2CMux.closeAll();
 
-    frontSensor.setup();
     rightSensor.setup();
+    frontSensor.setup();
     leftSensor.setup();
     backSensor.setup();
 

@@ -73,12 +73,13 @@ void setup() {
   pinMode(drive_fwd_pin, OUTPUT);
   led.init();
   led.off();
-  setupWifi();
   //Udp.begin(localPort);
   
   PWM::setup();
 
   setup_range_finders();
+  
+  setupWifi();
   
   timerSetup();
   

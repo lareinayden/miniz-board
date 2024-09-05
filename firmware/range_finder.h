@@ -40,7 +40,7 @@ public:
     // if lox->begin failes its becasue it was a warm boot and the VL53LOX is in
     // continues mesurement mode we can use an IO pin to reset the device in case
     // we get stuck in this mode
-    if (!lox->begin()) {
+    if (!lox->begin(0x29)) {
       Serial.println(F("Failed to boot VL53L0X"));
       while (true) delay(100);
     }
