@@ -77,6 +77,7 @@ void setup() {
   Udp.begin(localPort);
   //timerSetup();
   PWM::setup();
+  setup_range_finders();
 }
 
 void blinkTwice() {
