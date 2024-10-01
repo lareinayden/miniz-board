@@ -9,6 +9,7 @@
 #include "packet.h"
 #include "pwm.h"
 #include "status_light.h"
+#include "range_finder_block.hpp"
 
 unsigned int localPort = 2390;
 unsigned long last_packet_ts = 0;
