@@ -11,7 +11,7 @@
 #include "status_light.h"
 #include "range_finder_block.hpp"
 
-unsigned int localPort = 2390;
+unsigned int localPort = 28840;
 unsigned long last_packet_ts = 0;
 
 // board pin layout
@@ -73,11 +73,17 @@ void setup() {
   pinMode(drive_fwd_pin, OUTPUT);
   led.init();
   led.off();
-  setupWifi();
-  Udp.begin(localPort);
-  //timerSetup();
+  //Udp.begin(localPort);
+  
   PWM::setup();
+
   setup_range_finders();
+  
+  setupWifi();
+  
+  timerSetup();
+  
+  initPacket();
 }
 
 void blinkTwice() {
@@ -119,30 +125,16 @@ void loop() {
   led.update();
   //  Serial.println(millis() - loop_time);
   //  loop_time = millis();
-  int packet_size = Udp.parsePacket();
-
-  // process incoming packet
-  if (packet_size) {
-    if (packet_size != PACKET_SIZE) {
-      Serial.println("err packet size");
-    }
-
-    // Serial.print("From ");
-    //IPAddress remoteIp = Udp.remoteIP();
-    int len = Udp.read(in_buffer, PACKET_SIZE);
-    if (len != PACKET_SIZE) {
-      Serial.print("err reading packet size ");
-      Serial.println(len);
-    }
-    // Serial.println("parsing packet");
-    parsePacket();
+  fastNetworkStep();
+  
+  if (parsePacketIfUnique()) {
     last_packet_ts = millis();
     flag_failsafe = false;
     led.on();
-    // response is handled by packet parser
   }
 
   if (millis() - last_packet_ts > 100 && !flag_failsafe) {
+    Serial.println("failsafe!");
     throttle = 0;
     steering = 0;
     flag_failsafe = true;

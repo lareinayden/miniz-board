@@ -1,7 +1,12 @@
 #include "packet.h"
+#include <SPI.h>
+#include "utility/spi_drv.h"
+#include "range_finder_block.hpp"
 
 char in_buffer[PACKET_SIZE];
 char out_buffer[PACKET_SIZE];
+uint32_t last_seq_no = -1;
+
 float steering_requested;
 float steering_measured;
 
@@ -11,6 +16,56 @@ bool param_sensor_update = true;
 float param_steering_P = 1.5;
 float param_steering_I = 0.0;
 float param_steering_D = 0.05;
+
+void initPacket() {
+  memset(in_buffer, 0, PACKET_SIZE);
+  memset(out_buffer, 0, PACKET_SIZE);
+
+  Packet *p = (Packet *) in_buffer;
+
+  p->seq_no = -1;
+}
+
+uint8_t SEND_LIDAR_COMMAND = 0x41;
+void fastNetworkStep() {
+  WAIT_FOR_SLAVE_SELECT();
+  SpiDrv::sendCmd(SEND_LIDAR_COMMAND, 1);
+
+  SpiDrv::sendParamNoLen((uint8_t *) &out_buffer, PACKET_SIZE, 1);
+
+  SpiDrv::spiSlaveDeselect();
+
+
+
+  //Wait the reply elaboration
+  SpiDrv::waitForSlaveReady();
+  SpiDrv::spiSlaveSelect();
+
+  // Wait for reply
+  uint8_t _dataLen = 0; 
+  if (!SpiDrv::waitResponseCmd(SEND_LIDAR_COMMAND, PARAM_NUMS_1, (uint8_t*) &in_buffer, &_dataLen))
+  {
+      Serial.println("error waitResponse");
+  }
+  //Serial.print("Response data len:");
+  //Serial.println(_dataLen);
+
+
+  
+  SpiDrv::spiSlaveDeselect();
+}
+
+bool parsePacketIfUnique() {
+  Packet *p = (Packet *) in_buffer;
+
+  if (last_seq_no == p->seq_no) return false;
+
+  last_seq_no = p->seq_no;
+
+  parsePacket();
+
+  return true;
+}
 
 // parse packet in in_buffer
 // set appropriate global variables
@@ -103,6 +158,12 @@ void buildSensorResponsePacket() {
   Packet *p = (Packet *)out_buffer;
   p->steering_requested = steering_requested;
   p->steering_measured = steering_measured;
+
+  range_finder_readings_t lidar = get_latest_range_finder_sample();
+  p->front_lidar = lidar.front;
+  p->left_lidar = lidar.left;
+  p->right_lidar = lidar.right;
+  p->back_lidar = lidar.back;
 }
 
 void buildHeader(uint8_t type, uint8_t subtype) {
@@ -116,6 +177,8 @@ void buildHeader(uint8_t type, uint8_t subtype) {
 }
 
 int sendResponsePacket() {
+  if (2 > 1) return 0;
+  
   Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
   int size = Udp.write(out_buffer, PACKET_SIZE);
   /*
