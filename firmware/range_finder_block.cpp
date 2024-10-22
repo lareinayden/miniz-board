@@ -11,7 +11,7 @@ static RangeFinder leftSensor(2, &I2CMux);
 static RangeFinder backSensor(3, &I2CMux);
 
 void setup_range_finders() {
-    Serial.begin(115200);
+    Serial.begin(9600);
     pinMode(XSHUT, OUTPUT);
     digitalWrite(XSHUT, HIGH);
 

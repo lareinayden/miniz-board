@@ -99,11 +99,18 @@ public:
     int no_of_object_found = 0;
     char report[64];
     int status;
-    uint16_t range = -1;
+    uint16_t range = 0;
 
-    do {
+    uint16_t timeout = 1000;  // 1000 ms timeout
+    while (!NewDataReady && timeout > 0) {
       status = sensor_vl53l4cx_sat->VL53L4CX_GetMeasurementDataReady(&NewDataReady);
-    } while (!NewDataReady);
+      delay(1);
+      timeout--;
+    }
+    if (timeout == 0) {
+      Serial.println("Timeout waiting for VL53L4CX measurement data.");
+    }
+
 
     if ((!status) && (NewDataReady != 0)) {
       status = sensor_vl53l4cx_sat->VL53L4CX_GetMultiRangingData(pMultiRangingData);
