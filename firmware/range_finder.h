@@ -3,6 +3,11 @@
 #include <vl53l4cx_class.h>
 #include <Wire.h>
 
+#ifndef LED_BUILTIN
+  #define LED_BUILTIN 13
+#endif
+#define LedPin LED_BUILTIN
+
 class RangeFinder {
 public:
   byte channel;
@@ -45,7 +50,8 @@ public:
     //   Serial.println(F("Failed to boot VL53L4CX"));
     //   while (true) delay(100);
     // }
-
+    
+    pinMode(LedPin, OUTPUT);
     Wire.begin();
     sensor_vl53l4cx_sat->begin();
     sensor_vl53l4cx_sat->VL53L4CX_Off();
@@ -53,21 +59,6 @@ public:
     sensor_vl53l4cx_sat->VL53L4CX_StartMeasurement();
     Serial.println("StartMeasurement... ");
 
-    Serial.println("VL53L4CX initialization complete.");
-
-    Serial.println("booted chip!");
-
-  // Second Parameter options are VL53L0X_GPIOFUNCTIONALITY_OFF,
-    // VL53L0X_GPIOFUNCTIONALITY_THRESHOLD_CROSSED_LOW,
-    // VL53L0X_GPIOFUNCTIONALITY_THRESHOLD_CROSSED_HIGH,
-    // VL53L0X_GPIOFUNCTIONALITY_THRESHOLD_CROSSED_OUT,
-    // VL53L0X_GPIOFUNCTIONALITY_NEW_MEASURE_READY
-
-    Serial.println("Set GPIO Config so if range is lower the LowThreshold "
-                  "trigger Gpio Pin ");
-    /*lox->setGpioConfig(VL53L0X_DEVICEMODE_CONTINUOUS_RANGING,
-                      VL53L0X_GPIOFUNCTIONALITY_THRESHOLD_CROSSED_LOW,
-                      VL53L0X_INTERRUPTPOLARITY_LOW);*/
 
     // Set Interrupt Treashholds
     // Low reading set to 50mm  High Set to 100mm
@@ -101,16 +92,12 @@ public:
     int status;
     uint16_t range = 0;
 
-    uint16_t timeout = 1000;  // 1000 ms timeout
-    while (!NewDataReady && timeout > 0) {
+    do {
       status = sensor_vl53l4cx_sat->VL53L4CX_GetMeasurementDataReady(&NewDataReady);
-      delay(1);
-      timeout--;
-    }
-    if (timeout == 0) {
-      Serial.println("Timeout waiting for VL53L4CX measurement data.");
-    }
+    } while (!NewDataReady);
 
+    //Led on
+    digitalWrite(LedPin, HIGH);
 
     if ((!status) && (NewDataReady != 0)) {
       status = sensor_vl53l4cx_sat->VL53L4CX_GetMultiRangingData(pMultiRangingData);
@@ -129,10 +116,11 @@ public:
         Serial.print("mm");
       }
       if (status == 0) {
-      status = sensor_vl53l4cx_sat->VL53L4CX_ClearInterruptAndStartMeasurement();
+        status = sensor_vl53l4cx_sat->VL53L4CX_ClearInterruptAndStartMeasurement();
       }
     }
 
+    digitalWrite(LedPin, LOW);
     ReleaseMux();
 
     return (int) range;
