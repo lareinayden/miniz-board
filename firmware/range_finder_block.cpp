@@ -1,6 +1,5 @@
 #include "range_finder.h"
 #include "range_finder_block.hpp"
-#include <Wire.h>
 
 static TCA9548A I2CMux;
 
